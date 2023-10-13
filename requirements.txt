@@ -1,0 +1,7 @@
+tqdm==4.65.0
+torch==2.0.1
+numpy==1.20.3
+pandas==1.5.3
+point-transformer-pytorch==0.1.5
+open3d==0.16.0
+pynvml==11.5.0
