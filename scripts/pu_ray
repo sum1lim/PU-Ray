@@ -71,7 +71,7 @@ def main(args):
         for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
             if args.marching_steps:
                 indices = (
-                    torch.range(1, args.marching_steps)
+                    torch.arange(1, args.marching_steps+1)
                     .unsqueeze(0)
                     .unsqueeze(2)
                     .repeat(query.shape[0], 1, 1)

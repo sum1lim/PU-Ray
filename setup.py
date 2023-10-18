@@ -4,7 +4,7 @@ __version__ = (0, 0, 0)
 
 setup(
     name="pu-ray",
-    description="Per-ray Point-cloud Upsamling",
+    description="PU-Ray: Point Cloud Upsampling via Ray Marching on Implicit Surface",
     version=".".join(str(d) for d in __version__),
     author="Sangwon Lim",
     author_email="sangwon3@ualberta.ca",
