@@ -6,8 +6,8 @@ Official implementation of "PU-Ray: Point Cloud Upsampling via Ray Marching on I
 ## Installation
 ### Create virtual environment and install dependencies
 ```
-python -m venv venv
-source venv/bin/activate
+conda create -n pu-ray python==3.8.17
+conda activate pu-ray
 pip install -r requirements.txt
 pip install .
 ```
