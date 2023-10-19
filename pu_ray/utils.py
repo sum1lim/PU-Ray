@@ -21,7 +21,7 @@ class TrainData(Dataset):
         self,
         input_dir,
         query_dir,
-        k,
+        patch_k,
         device,
         num_sample=None,
         num_query=2048,
@@ -29,7 +29,7 @@ class TrainData(Dataset):
         seed=0,
     ):
         self.device = device
-        self.k = k
+        self.patch_k = patch_k
 
         self.labels = None
         self.query_vectors = None
@@ -94,7 +94,7 @@ class TrainData(Dataset):
             knn_coords, _ = KNN(
                 input_pc,
                 query_pc,
-                self.k,
+                self.patch_k,
                 include_nearest=first,
             )
 
@@ -221,7 +221,7 @@ class UpsampleData(Dataset):
         self,
         input_pc,
         query_pc,
-        k,
+        patch_k,
         query_k,
         device,
         output_size,
@@ -229,7 +229,7 @@ class UpsampleData(Dataset):
         real_scanned=False,
     ):
         self.device = device
-        self.k = k
+        self.patch_k = patch_k
 
         input_pc = input_pc.to("cpu")
         input_df = pd.DataFrame(input_pc.cpu().numpy(), columns=["x", "y", "z"])
@@ -272,7 +272,7 @@ class UpsampleData(Dataset):
         knn_coords, _ = KNN(
             input_pc,
             query_pc,
-            self.k,
+            self.patch_k,
             include_nearest=True,
             cossim=False,
         )
@@ -552,9 +552,9 @@ def covariance(
     return cov, mean
 
 
-def load_model(model_file, model_class, device, k, marching_steps):
+def load_model(model_file, model_class, device, marching_steps):
     # Loading the saved model
-    model = model_class(device=device, k=k, steps=marching_steps)
+    model = model_class(device=device, steps=marching_steps)
     state_dict = torch.load(f"./models/{model_file}.pt", map_location="cpu")
 
     new_state_dict = OrderedDict()

@@ -61,10 +61,9 @@ class PUray(nn.Module):
     Preliminary model with a point transformer layer followed by MLP
     """
 
-    def __init__(self, *, device, k=16, hidden_size=32, steps=8):
+    def __init__(self, *, device, hidden_size=32, steps=8):
         super().__init__()
         self.device = device
-        self.k = k
         self.hidden_size = hidden_size
         self.steps = steps
         self.mult = 4

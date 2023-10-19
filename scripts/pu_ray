@@ -26,7 +26,7 @@ def main(args):
     print(device)
     print(f"Upsampling {args.input} with {args.marching_steps} steps")
 
-    model = load_model(args.model, PUray, device, 16, args.marching_steps)
+    model = load_model(args.model, PUray, device, args.marching_steps)
 
     count = 0
     implicit_pc = []
@@ -49,7 +49,7 @@ def main(args):
         pc_data = UpsampleData(
             input_pc,
             query_pc,
-            k=16,
+            patch_k=args.patch_k,
             query_k=args.query_k,
             output_size=len(input_df) * args.r,
             device=device,
@@ -71,7 +71,7 @@ def main(args):
         for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
             if args.marching_steps:
                 indices = (
-                    torch.arange(1, args.marching_steps+1)
+                    torch.arange(1, args.marching_steps + 1)
                     .unsqueeze(0)
                     .unsqueeze(2)
                     .repeat(query.shape[0], 1, 1)
@@ -189,10 +189,16 @@ if __name__ == "__main__":
         help="Model name",
     )
     parser.add_argument(
+        "--patch-k",
+        type=int,
+        default=16,
+        help="Patch size",
+    )
+    parser.add_argument(
         "--query-k",
         type=int,
         default=16,
-        help="Query sampling neighbourhood size",
+        help="Neighbourhood size for novel query sampling",
     )
     parser.add_argument(
         "--r",

@@ -27,7 +27,7 @@ def main(args):
     pc_data = TrainData(
         args.input_dir,
         args.query_dir,
-        k=16,
+        patch_k=args.k,
         device=device,
         num_query=args.num_query,
         num_op=args.num_op,
@@ -44,7 +44,7 @@ def main(args):
         drop_last=True,
     )
 
-    model = load_model(args.model, PUray, device, 16, args.marching_steps)
+    model = load_model(args.model, PUray, device, args.marching_steps)
 
     count = 0
     errs = []
@@ -87,6 +87,12 @@ if __name__ == "__main__":
         "--model",
         type=str,
         help="Model name",
+    )
+    parser.add_argument(
+        "--patch-k",
+        type=int,
+        default=16,
+        help="Patch size",
     )
     parser.add_argument(
         "--marching-steps",

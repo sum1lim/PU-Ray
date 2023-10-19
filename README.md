@@ -29,8 +29,8 @@ bash train.sh
 Modify the arguments to experiment with different configurations. The command information can be found using the following command.
 ```
 train_model -h
-usage: train_model [-h] [--input-dir INPUT_DIR] [--query-dir QUERY_DIR] [--log LOG] [--marching-steps MARCHING_STEPS] [--num-sample NUM_SAMPLE] [--num-query NUM_QUERY]
-                   [--num-op NUM_OP] [--verbose] [--seed SEED] [--num-epochs NUM_EPOCHS]
+usage: train_model [-h] [--input-dir INPUT_DIR] [--query-dir QUERY_DIR] [--log LOG] [--patch-k PATCH_K] [--marching-steps MARCHING_STEPS] [--num-sample NUM_SAMPLE]
+                   [--num-query NUM_QUERY] [--num-op NUM_OP] [--verbose] [--seed SEED] [--num-epochs NUM_EPOCHS]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -39,6 +39,7 @@ optional arguments:
   --query-dir QUERY_DIR
                         Query data directory
   --log LOG             log file name
+  --patch-k PATCH_K     Patch size
   --marching-steps MARCHING_STEPS
                         Marching steps
   --num-sample NUM_SAMPLE
@@ -51,8 +52,8 @@ optional arguments:
   --num-epochs NUM_EPOCHS
                         Number of epochs
 
-test_model -h
-usage: test_model [-h] [--input-dir INPUT_DIR] [--query-dir QUERY_DIR] [--model MODEL] [--marching-steps MARCHING_STEPS] [--num-query NUM_QUERY] [--num-op NUM_OP] [--verbose]
+usage: test_model [-h] [--input-dir INPUT_DIR] [--query-dir QUERY_DIR] [--model MODEL] [--patch-k PATCH_K] [--marching-steps MARCHING_STEPS] [--num-query NUM_QUERY]
+                  [--num-op NUM_OP] [--verbose]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -61,13 +62,13 @@ optional arguments:
   --query-dir QUERY_DIR
                         Query data directory
   --model MODEL         Model name
+  --patch-k PATCH_K     Patch size
   --marching-steps MARCHING_STEPS
                         Marching steps
   --num-query NUM_QUERY
                         Number of testing samples
   --num-op NUM_OP       Number of observation points
   --verbose             Print to stdout
-
 ```
 
 ## Upsampling
@@ -78,8 +79,8 @@ bash upsample.sh
 Modify the arguments to upsample with different configurations. The command information can be found using the following command.
 ```
 pu_ray -h
-usage: pu_ray [-h] [--input INPUT] [--gt-dir GT_DIR] [--output-dir OUTPUT_DIR] [--gt-queries] [--model MODEL] [--query-k QUERY_K] [--r R] [--marching-steps MARCHING_STEPS]
-              [--implicit-points] [--num-op NUM_OP] [--real-scanned]
+usage: pu_ray [-h] [--input INPUT] [--gt-dir GT_DIR] [--output-dir OUTPUT_DIR] [--gt-queries] [--model MODEL] [--patch-k PATCH_K] [--query-k QUERY_K] [--r R]
+              [--marching-steps MARCHING_STEPS] [--implicit-points] [--num-op NUM_OP] [--real-scanned]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -89,14 +90,14 @@ optional arguments:
                         Name of the output file
   --gt-queries          Sample queries from ground truth
   --model MODEL         Model name
-  --query-k QUERY_K     Query sampling neighbourhood size
+  --patch-k PATCH_K     Patch size
+  --query-k QUERY_K     Neighbourhood size for novel query sampling
   --r R                 Upsampling rate
   --marching-steps MARCHING_STEPS
                         Marching steps
   --implicit-points     Output implicit points
   --num-op NUM_OP       Number of observation points
   --real-scanned        Real scanned data adaptation
-
 ```
 
 ## Evaluation

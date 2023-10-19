@@ -25,9 +25,7 @@ def main(args):
         log_target = open(f"./log/{args.log}.log", "w")
 
     # Load the model
-    model = nn.DataParallel(PUray(device=device, k=16, steps=args.marching_steps)).to(
-        device
-    )
+    model = nn.DataParallel(PUray(device=device, steps=args.marching_steps)).to(device)
     print(
         f"Number of parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}"
     )
@@ -35,7 +33,7 @@ def main(args):
     train_dataset = TrainData(
         args.input_dir,
         args.query_dir,
-        k=16,
+        patch_k=args.patch_k,
         device=device,
         num_sample=args.num_sample,
         num_query=args.num_query,
@@ -246,6 +244,12 @@ if __name__ == "__main__":
         type=str,
         default="log",
         help="log file name",
+    )
+    parser.add_argument(
+        "--patch-k",
+        type=int,
+        default=16,
+        help="Patch size",
     )
     parser.add_argument(
         "--marching-steps",
