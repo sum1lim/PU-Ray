@@ -6,6 +6,7 @@ import torch
 import pandas as pd
 import numpy as np
 import open3d as o3d
+import open3d.core as o3c
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from torch import nn, cos, sin
@@ -458,8 +459,11 @@ def farthest_point_sampling(pc, num_sample, noise_std_range=None, k=None):
         ).T
     )
     np.random.shuffle(vertices)
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(vertices)
+    pcd = o3d.t.geometry.PointCloud(
+        o3c.Tensor(vertices, o3c.float64, o3c.Device("cuda:0"))
+    )
+    # pcd = o3d.geometry.PointCloud()
+    # pcd.points = o3d.utility.Vector3dVector(vertices)
 
     if noise_std_range:
         pcd, _ = pcd.remove_statistical_outlier(
@@ -470,7 +474,9 @@ def farthest_point_sampling(pc, num_sample, noise_std_range=None, k=None):
         downsampled = pcd.farthest_point_down_sample(num_sample)
     except RuntimeError:
         downsampled = pcd
-    downsampled = pd.DataFrame(np.asarray(downsampled.points), columns=["x", "y", "z"])
+    downsampled = pd.DataFrame(
+        np.asarray(downsampled.point.positions.cpu().numpy()), columns=["x", "y", "z"]
+    )
 
     return downsampled
 
