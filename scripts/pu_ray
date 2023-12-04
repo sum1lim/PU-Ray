@@ -32,7 +32,7 @@ def main(args):
     implicit_pc = []
     op_pc = []
 
-    input_df = pd.read_csv(args.input, sep=" ", names=["x", "y", "z"])
+    input_df = pd.read_csv(args.input, names=["x", "y", "z"])
     input_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
     # Chamfer distance calculation
 
