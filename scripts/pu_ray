@@ -13,6 +13,7 @@ from pu_ray.utils import (
     load_model,
     farthest_point_sampling,
     garbage_collect,
+    noise_removal,
 )
 from pu_ray.models import PUray
 from torch.utils.data import DataLoader
@@ -89,17 +90,28 @@ def main(args):
             # Record inference time
             inference_time += time.time() - start_time
 
-            op_pos = op_pos.detach().cpu()
+            if args.real_scanned:
+                valid_idx = noise_removal(output_coords, knn_coords)
+
+            scaling_factor = scaling_factor[valid_idx]
+            op_pos = op_pos[valid_idx].detach().cpu()
             op_pc.append(op_pos)
 
-            output_coords = (output_coords * scaling_factor.squeeze(1)).detach().cpu()
+            output_coords = (
+                (output_coords[valid_idx] * scaling_factor.squeeze(1)).detach().cpu()
+            )
             output_coords += op_pos
+
             input_pc = torch.cat([input_pc, output_coords], dim=0)
 
             if args.marching_steps:
-                implicit_points = (implicit_points * scaling_factor).detach().cpu()
+                implicit_points = (
+                    (implicit_points[valid_idx] * scaling_factor).detach().cpu()
+                )
                 implicit_points += op_pos.unsqueeze(1)
-                implicit_points = torch.cat((implicit_points, indices), 2)
+                implicit_points = torch.cat(
+                    (implicit_points, indices[valid_idx.detach().cpu()]), 2
+                )
                 implicit_points = torch.flatten(implicit_points, 0, 1)
                 implicit_pc.append(torch.cat([implicit_points], dim=0))
 
@@ -131,12 +143,7 @@ def main(args):
     # output_pc = torch.cat(output_pc, dim=0)
     output_pc = input_pc.detach().cpu().detach().numpy()
     output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
-    if args.real_scanned:
-        output_pc = farthest_point_sampling(output_pc, len(input_df) * args.r, 5, k=16)[
-            ["x", "y", "z"]
-        ].values
-    else:
-        output_pc = output_pc.values
+    output_pc = output_pc.values
 
     filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
 

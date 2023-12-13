@@ -337,7 +337,7 @@ class UpsampleData(Dataset):
                     reference_vectors * point_vector.unsqueeze(0),
                     dim=-1,
                 )
-                criteria = cossims**5
+                criteria = cossims
 
             else:
                 criteria = -rel_dist
@@ -345,19 +345,25 @@ class UpsampleData(Dataset):
             _, knn_indices = criteria.topk(k + 1, largest=True)
 
             # queries.append((point.unsqueeze(0) + reference[knn_indices[1:]]) / 2)
-            queries += [
-                (point + reference[knn_indices[i]]).unsqueeze(0) / 2
-                for i in range(1, k + 1)
-                if torch.sum(
-                    torch.sum(
-                        rel_vectors[knn_indices[1 : i + 1]]
-                        * rel_vectors[knn_indices[i]],
-                        -1,
-                    )
-                    > math.cos(math.pi / 6)
+            if real_scanned:
+                largest_idx = rel_dist[knn_indices[1:]].topk(6, largest=True)[1]
+                queries.append(
+                    (point.unsqueeze(0) + reference[knn_indices[1:]][largest_idx]) / 2
                 )
-                == 1
-            ][:6]
+            else:
+                queries += [
+                    (point + reference[knn_indices[i]]).unsqueeze(0) / 2
+                    for i in range(1, k + 1)
+                    if torch.sum(
+                        torch.sum(
+                            rel_vectors[knn_indices[1 : i + 1]]
+                            * rel_vectors[knn_indices[i]],
+                            -1,
+                        )
+                        > math.cos(math.pi / 6)
+                    )
+                    == 1
+                ][:6]
 
         garbage_collect([target, reference])
 
@@ -367,9 +373,7 @@ class UpsampleData(Dataset):
         )
         if real_scanned:
             query_pc = torch.tensor(
-                farthest_point_sampling(query_df, len(target), 2, 16)[
-                    ["x", "y", "z"]
-                ].values
+                farthest_point_sampling(query_df, len(target))[["x", "y", "z"]].values
             )
         else:
             query_pc = torch.tensor(
@@ -441,7 +445,7 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False):
     return knn, topk_indices
 
 
-def farthest_point_sampling(pc, num_sample, noise_std_range=None, k=None):
+def farthest_point_sampling(pc, num_sample):
     # Farthest point sampling using implementation by
     #  @article{open3d,
     #    author  = {Qian-Yi Zhou and Jaesik Park and Vladlen Koltun},
@@ -465,11 +469,6 @@ def farthest_point_sampling(pc, num_sample, noise_std_range=None, k=None):
     # pcd = o3d.geometry.PointCloud()
     # pcd.points = o3d.utility.Vector3dVector(vertices)
 
-    if noise_std_range:
-        pcd, _ = pcd.remove_statistical_outlier(
-            k, noise_std_range, print_progress=False
-        )
-
     try:
         downsampled = pcd.farthest_point_down_sample(num_sample)
     except RuntimeError:
@@ -479,6 +478,14 @@ def farthest_point_sampling(pc, num_sample, noise_std_range=None, k=None):
     )
 
     return downsampled
+
+
+def noise_removal(coords, knn_coords):
+    avg_point = torch.mean(knn_coords, 1)
+    std = torch.std(knn_coords, 1)
+    valid_idx = torch.sum(torch.abs(coords - avg_point) < std * 2, 1) == 3
+
+    return valid_idx
 
 
 def generate_op(
