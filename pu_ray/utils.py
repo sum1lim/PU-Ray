@@ -373,7 +373,9 @@ class UpsampleData(Dataset):
         )
         if real_scanned:
             query_pc = torch.tensor(
-                farthest_point_sampling(query_df, len(target))[["x", "y", "z"]].values
+                farthest_point_sampling(query_df, len(target) // 4)[
+                    ["x", "y", "z"]
+                ].values
             )
         else:
             query_pc = torch.tensor(
@@ -480,10 +482,11 @@ def farthest_point_sampling(pc, num_sample):
     return downsampled
 
 
-def noise_removal(coords, knn_coords):
-    avg_point = torch.mean(knn_coords, 1)
-    std = torch.std(knn_coords, 1)
-    valid_idx = torch.sum(torch.abs(coords - avg_point) < std * 2, 1) == 3
+def noise_removal(points, input_pc):
+    knn, _ = KNN(input_pc, points, 8)
+    avg_point = torch.mean(knn, 1)
+    std = torch.std(knn, 1)
+    valid_idx = torch.sum(torch.abs(points - avg_point) < std * 1.5, 1) == 3
 
     return valid_idx
 

@@ -74,7 +74,7 @@ def main(args):
 
         for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
             if args.marching_steps:
-                indices = (
+                step_idx = (
                     torch.arange(1, args.marching_steps + 1)
                     .unsqueeze(0)
                     .unsqueeze(2)
@@ -90,27 +90,26 @@ def main(args):
             # Record inference time
             inference_time += time.time() - start_time
 
-            if args.real_scanned:
-                valid_idx = noise_removal(output_coords, knn_coords)
-
-            scaling_factor = scaling_factor[valid_idx]
-            op_pos = op_pos[valid_idx].detach().cpu()
+            op_pos = op_pos.detach().cpu()
             op_pc.append(op_pos)
 
-            output_coords = (
-                (output_coords[valid_idx] * scaling_factor.squeeze(1)).detach().cpu()
-            )
+            output_coords = (output_coords * scaling_factor.squeeze(1)).detach().cpu()
             output_coords += op_pos
 
-            input_pc = torch.cat([input_pc, output_coords], dim=0)
+            if args.real_scanned:
+                valid_idx = noise_removal(output_coords, input_pc)
+
+            input_pc = torch.cat([input_pc, output_coords[valid_idx]], dim=0)
 
             if args.marching_steps:
                 implicit_points = (
-                    (implicit_points[valid_idx] * scaling_factor).detach().cpu()
+                    (implicit_points[valid_idx] * scaling_factor[valid_idx])
+                    .detach()
+                    .cpu()
                 )
-                implicit_points += op_pos.unsqueeze(1)
+                implicit_points += op_pos[valid_idx].unsqueeze(1)
                 implicit_points = torch.cat(
-                    (implicit_points, indices[valid_idx.detach().cpu()]), 2
+                    (implicit_points, step_idx[valid_idx.detach().cpu()]), 2
                 )
                 implicit_points = torch.flatten(implicit_points, 0, 1)
                 implicit_pc.append(torch.cat([implicit_points], dim=0))
