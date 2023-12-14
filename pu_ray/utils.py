@@ -258,8 +258,8 @@ class UpsampleData(Dataset):
         # else:
         op = (
             generate_op(
-                farthest_point_sampling(updating_df, num_op),
-                updating_df,
+                farthest_point_sampling(input_df, num_op),
+                input_df,
                 "cpu",
                 k=16,
                 calculate_mean=False,
@@ -486,7 +486,7 @@ def farthest_point_sampling(pc, num_sample):
 
 
 def noise_removal(points, input_pc):
-    knn, _ = KNN(input_pc, points, 16, include_nearest=True)
+    knn, _ = KNN(input_pc, points, 8, include_nearest=True)
     avg_point = torch.mean(knn, 1)
     std = torch.std(knn, 1)
     valid_idx = torch.sum(torch.abs(points - avg_point) < std * 1.5, 1) == 3
