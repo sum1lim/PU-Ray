@@ -221,6 +221,7 @@ class UpsampleData(Dataset):
     def __init__(
         self,
         input_pc,
+        updating_pc,
         query_pc,
         patch_k,
         query_k,
@@ -234,14 +235,16 @@ class UpsampleData(Dataset):
 
         input_pc = input_pc.to("cpu")
         input_df = pd.DataFrame(input_pc.cpu().numpy(), columns=["x", "y", "z"])
+        updating_pc = updating_pc.to("cpu")
+        updating_df = pd.DataFrame(updating_pc.cpu().numpy(), columns=["x", "y", "z"])
 
         if num_op == None:
             num_op = len(input_df) // 16
 
         if query_pc == None:
             query_pc = self.novel_queries(
-                input_df,
-                input_df,
+                updating_df,
+                updating_df,
                 query_k,
                 "cpu",
                 output_size,
@@ -255,8 +258,8 @@ class UpsampleData(Dataset):
         # else:
         op = (
             generate_op(
-                farthest_point_sampling(input_df, num_op),
-                input_df,
+                farthest_point_sampling(updating_df, num_op),
+                updating_df,
                 "cpu",
                 k=16,
                 calculate_mean=False,
@@ -483,10 +486,16 @@ def farthest_point_sampling(pc, num_sample):
 
 
 def noise_removal(points, input_pc):
-    knn, _ = KNN(input_pc, points, 8)
+    knn, _ = KNN(input_pc, points, 16, include_nearest=True)
     avg_point = torch.mean(knn, 1)
     std = torch.std(knn, 1)
     valid_idx = torch.sum(torch.abs(points - avg_point) < std * 1.5, 1) == 3
+
+    # median_std = torch.median(std, 1).values
+    # avg_median_std = torch.mean(median_std, 0)
+    # std_median_std = torch.std(median_std, 0)
+
+    # valid_idx *= median_std - avg_median_std < std_median_std * 1.5
 
     return valid_idx
 

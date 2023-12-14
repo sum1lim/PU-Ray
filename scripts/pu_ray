@@ -38,6 +38,7 @@ def main(args):
     elif args.input.endswith(".csv"):
         input_df = pd.read_csv(args.input, sep=",", names=["x", "y", "z"])
     input_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
+    updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
     # Chamfer distance calculation
 
     gt_file = args.input.split("/")[-1]
@@ -49,9 +50,10 @@ def main(args):
 
     total_time = time.time()
     inference_time = 0
-    while len(input_pc) < len(input_df) * args.r:
+    while len(updating_pc) < len(input_df) * args.r:
         pc_data = UpsampleData(
             input_pc,
+            updating_pc,
             query_pc,
             patch_k=args.patch_k,
             query_k=args.query_k,
@@ -99,7 +101,7 @@ def main(args):
             if args.real_scanned:
                 valid_idx = noise_removal(output_coords, input_pc)
 
-            input_pc = torch.cat([input_pc, output_coords[valid_idx]], dim=0)
+            updating_pc = torch.cat([updating_pc, output_coords[valid_idx]], dim=0)
 
             if args.marching_steps:
                 implicit_points = (
@@ -140,7 +142,7 @@ def main(args):
     print(f"Total time: {time.time() - total_time} sec")
 
     # output_pc = torch.cat(output_pc, dim=0)
-    output_pc = input_pc.detach().cpu().detach().numpy()
+    output_pc = updating_pc.detach().cpu().detach().numpy()
     output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
     output_pc = output_pc.values
 
