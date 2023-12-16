@@ -349,10 +349,19 @@ class UpsampleData(Dataset):
 
             # queries.append((point.unsqueeze(0) + reference[knn_indices[1:]]) / 2)
             if real_scanned:
-                largest_idx = rel_dist[knn_indices[1:]].topk(6, largest=True)[1]
-                queries.append(
-                    (point.unsqueeze(0) + reference[knn_indices[1:]][largest_idx]) / 2
-                )
+                queries += [
+                    (point + reference[knn_indices[i]]).unsqueeze(0) / 2
+                    for i in range(k, 0, -1)
+                    if torch.sum(
+                        torch.sum(
+                            rel_vectors[knn_indices[1 : i + 1]]
+                            * rel_vectors[knn_indices[i]],
+                            -1,
+                        )
+                        > math.cos(math.pi / 6)
+                    )
+                    == 1
+                ][:6]
             else:
                 queries += [
                     (point + reference[knn_indices[i]]).unsqueeze(0) / 2
@@ -486,16 +495,21 @@ def farthest_point_sampling(pc, num_sample):
 
 
 def noise_removal(points, input_pc):
-    knn, _ = KNN(input_pc, points, 8, include_nearest=True)
+    knn = KNN(input_pc, points, 32, include_nearest=True)[0]
+
     avg_point = torch.mean(knn, 1)
     std = torch.std(knn, 1)
-    valid_idx = torch.sum(torch.abs(points - avg_point) < std * 1.5, 1) == 3
+    std[:, 0] *= 5
+    std[:, 1] *= 3
+    std[:, 2] *= 1
+    valid_idx = torch.sum(torch.abs(points - avg_point) < std, 1) == 3
 
-    # median_std = torch.median(std, 1).values
-    # avg_median_std = torch.mean(median_std, 0)
-    # std_median_std = torch.std(median_std, 0)
-
-    # valid_idx *= median_std - avg_median_std < std_median_std * 1.5
+    avg_std = torch.mean(std, 0)
+    std_std = torch.std(std, 0)
+    std_std[0] *= 5
+    std_std[1] *= 3
+    std_std[2] *= 1
+    valid_idx *= torch.sum(torch.abs(std - avg_std) < std_std, 1) == 3
 
     return valid_idx
 

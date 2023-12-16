@@ -99,7 +99,7 @@ def main(args):
             output_coords += op_pos
 
             if args.real_scanned:
-                valid_idx = noise_removal(output_coords, input_pc)
+                valid_idx = noise_removal(output_coords, updating_pc)
 
             updating_pc = torch.cat([updating_pc, output_coords[valid_idx]], dim=0)
 
