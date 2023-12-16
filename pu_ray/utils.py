@@ -385,7 +385,7 @@ class UpsampleData(Dataset):
         )
         if real_scanned:
             query_pc = torch.tensor(
-                farthest_point_sampling(query_df, len(target) // 4)[
+                farthest_point_sampling(query_df, output_size // 16)[
                     ["x", "y", "z"]
                 ].values
             )
