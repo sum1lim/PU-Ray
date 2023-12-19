@@ -506,7 +506,7 @@ def noise_removal(points, input_pc, updating_pc):
     point_std = torch.std(input_pc, 0)
     point_std[0] *= 3
     point_std[1] *= 3
-    point_std[2] *= 1.5
+    point_std[2] *= 2
     valid_idx = torch.sum(torch.abs(points - point_avg) < point_std, 1) == 3
 
     updating_knn = KNN(updating_pc, points, 16, include_nearest=True, cossim=True)[0]
