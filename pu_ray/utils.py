@@ -239,7 +239,7 @@ class UpsampleData(Dataset):
         updating_df = pd.DataFrame(updating_pc.cpu().numpy(), columns=["x", "y", "z"])
 
         if num_op == None:
-            num_op = len(input_df) // 16
+            num_op = len(updating_df) // 32
 
         if query_pc == None:
             query_pc = self.novel_queries(
@@ -258,13 +258,13 @@ class UpsampleData(Dataset):
         # else:
         op = (
             generate_op(
-                farthest_point_sampling(input_df, num_op),
-                input_df,
+                farthest_point_sampling(updating_df, num_op),
+                updating_df,
                 "cpu",
                 k=16,
                 calculate_mean=False,
                 perturb=False,
-                real_scanned=False,
+                real_scanned=real_scanned,
             )
             .double()
             .to("cpu")
@@ -274,7 +274,7 @@ class UpsampleData(Dataset):
         op_xyz = op_xyz.squeeze()
 
         knn_coords, _ = KNN(
-            input_pc,
+            updating_pc,
             query_pc,
             self.patch_k,
             include_nearest=True,
@@ -325,6 +325,17 @@ class UpsampleData(Dataset):
     ):
         target = torch.tensor(target[["x", "y", "z"]].values).to(device)
         reference = torch.tensor(reference[["x", "y", "z"]].values).to(device)
+
+        if real_scanned:
+            target_df = pd.DataFrame(
+                target.cpu().numpy(),
+                columns=["x", "y", "z"],
+            )
+            target = torch.tensor(
+                farthest_point_sampling(target_df, output_size // 32)[
+                    ["x", "y", "z"]
+                ].values
+            )
 
         queries = []
         for point in target:
@@ -379,17 +390,13 @@ class UpsampleData(Dataset):
 
         garbage_collect([target, reference])
 
-        query_df = pd.DataFrame(
-            torch.unique(torch.cat(queries, 0), dim=0).cpu().numpy(),
-            columns=["x", "y", "z"],
-        )
         if real_scanned:
-            query_pc = torch.tensor(
-                farthest_point_sampling(query_df, output_size // 16)[
-                    ["x", "y", "z"]
-                ].values
-            )
+            query_pc = torch.cat(queries, 0)
         else:
+            query_df = pd.DataFrame(
+                torch.unique(torch.cat(queries, 0), dim=0).cpu().numpy(),
+                columns=["x", "y", "z"],
+            )
             query_pc = torch.tensor(
                 farthest_point_sampling(query_df, output_size - len(target))[
                     ["x", "y", "z"]
@@ -494,22 +501,29 @@ def farthest_point_sampling(pc, num_sample):
     return downsampled
 
 
-def noise_removal(points, input_pc):
-    knn = KNN(input_pc, points, 32, include_nearest=True)[0]
+def noise_removal(points, input_pc, updating_pc):
+    point_avg = torch.mean(input_pc, 0)
+    point_std = torch.std(input_pc, 0)
+    point_std[0] *= 3
+    point_std[1] *= 3
+    point_std[2] *= 1.5
+    valid_idx = torch.sum(torch.abs(points - point_avg) < point_std, 1) == 3
 
-    avg_point = torch.mean(knn, 1)
-    std = torch.std(knn, 1)
-    std[:, 0] *= 5
-    std[:, 1] *= 3
-    std[:, 2] *= 1
-    valid_idx = torch.sum(torch.abs(points - avg_point) < std, 1) == 3
+    updating_knn = KNN(updating_pc, points, 16, include_nearest=True, cossim=True)[0]
 
-    avg_std = torch.mean(std, 0)
-    std_std = torch.std(std, 0)
-    std_std[0] *= 5
+    knn_avg = torch.mean(updating_knn, 1)
+    knn_std = torch.std(updating_knn, 1)
+    knn_std[:, 0] *= 3
+    knn_std[:, 1] *= 3
+    knn_std[:, 2] *= 1
+    valid_idx *= torch.sum(torch.abs(points - knn_avg) < knn_std, 1) == 3
+
+    std_avg = torch.mean(knn_std, 0)
+    std_std = torch.std(knn_std, 0)
+    std_std[0] *= 3
     std_std[1] *= 3
-    std_std[2] *= 1
-    valid_idx *= torch.sum(torch.abs(std - avg_std) < std_std, 1) == 3
+    std_std[2] *= 2
+    valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
 
     return valid_idx
 
