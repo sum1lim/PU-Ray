@@ -270,9 +270,6 @@ class UpsampleData(Dataset):
             .to("cpu")
         )
 
-        op_xyz, _ = KNN(op, query_pc, 1, include_nearest=True)
-        op_xyz = op_xyz.squeeze()
-
         knn_coords, _ = KNN(
             updating_pc,
             query_pc,
@@ -280,6 +277,22 @@ class UpsampleData(Dataset):
             include_nearest=True,
             cossim=False,
         )
+        if real_scanned:
+            knn_std = torch.std(knn_coords, 1)
+            std_avg = torch.mean(knn_std, 0)
+            std_std = torch.std(knn_std, 0)
+            valid_idx = torch.mean(knn_std, 1) > torch.mean(std_avg, 0)
+
+            std_std[0] *= 5
+            std_std[1] *= 3
+            std_std[2] *= 1
+            valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
+
+            query_pc = query_pc[valid_idx]
+            knn_coords = knn_coords[valid_idx]
+
+        op_xyz, _ = KNN(op, query_pc, 1, include_nearest=True)
+        op_xyz = op_xyz.squeeze()
 
         # relative positioning
         self.op_pos = op_xyz
@@ -327,12 +340,20 @@ class UpsampleData(Dataset):
         reference = torch.tensor(reference[["x", "y", "z"]].values).to(device)
 
         if real_scanned:
+            # point_avg = torch.mean(reference, 0)
+            # point_std = torch.std(reference, 0)
+            # point_std[0] *= 2
+            # point_std[1] *= 2
+            # point_std[2] *= 2
+            # valid_idx = torch.sum(torch.abs(target - point_avg) < point_std, 1) == 3
+            # target = target[valid_idx]
+
             target_df = pd.DataFrame(
                 target.cpu().numpy(),
                 columns=["x", "y", "z"],
             )
             target = torch.tensor(
-                farthest_point_sampling(target_df, output_size // 32)[
+                farthest_point_sampling(target_df, output_size // 8)[
                     ["x", "y", "z"]
                 ].values
             )
@@ -429,10 +450,10 @@ def read_test_file(filename):
     return verts, faces
 
 
-def KNN(references, xyz, k, include_nearest=False, cossim=False):
+def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
     if cossim:
-        query_vector = xyz.cpu() / xyz.cpu().norm(dim=-1, keepdim=True)
-        reference_vectors = references.cpu() / references.cpu().norm(
+        query_vector = xyz.to(device) / xyz.to(device).norm(dim=-1, keepdim=True)
+        reference_vectors = references.to(device) / references.to(device).norm(
             dim=-1, keepdim=True
         )
 
@@ -502,13 +523,6 @@ def farthest_point_sampling(pc, num_sample):
 
 
 def noise_removal(points, input_pc, updating_pc):
-    point_avg = torch.mean(input_pc, 0)
-    point_std = torch.std(input_pc, 0)
-    point_std[0] *= 3
-    point_std[1] *= 3
-    point_std[2] *= 2
-    valid_idx = torch.sum(torch.abs(points - point_avg) < point_std, 1) == 3
-
     updating_knn = KNN(updating_pc, points, 16, include_nearest=True, cossim=True)[0]
 
     knn_avg = torch.mean(updating_knn, 1)
@@ -516,14 +530,7 @@ def noise_removal(points, input_pc, updating_pc):
     knn_std[:, 0] *= 5
     knn_std[:, 1] *= 3
     knn_std[:, 2] *= 1
-    valid_idx *= torch.sum(torch.abs(points - knn_avg) < knn_std, 1) == 3
-
-    std_avg = torch.mean(knn_std, 0)
-    std_std = torch.std(knn_std, 0)
-    std_std[0] *= 5
-    std_std[1] *= 3
-    std_std[2] *= 1
-    valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
+    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std, 1) == 3
 
     return valid_idx
 
