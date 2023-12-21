@@ -341,13 +341,13 @@ class UpsampleData(Dataset):
         reference = torch.tensor(reference[["x", "y", "z"]].values).to(device)
 
         if real_scanned:
-            point_avg = torch.mean(reference, 0)
-            point_std = torch.std(reference, 0)
-            point_std[0] *= 2
-            point_std[1] *= 2
-            point_std[2] *= 2
-            valid_idx = torch.sum(torch.abs(target - point_avg) < point_std, 1) == 3
-            target = target[valid_idx]
+            # point_avg = torch.mean(reference, 0)
+            # point_std = torch.std(reference, 0)
+            # point_std[0] *= 2
+            # point_std[1] *= 2
+            # point_std[2] *= 2
+            # valid_idx = torch.sum(torch.abs(target - point_avg) < point_std, 1) == 3
+            # target = target[valid_idx]
 
             perm = torch.randperm(target.size(0))
             target = target[perm]
