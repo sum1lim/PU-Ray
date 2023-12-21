@@ -227,6 +227,7 @@ class UpsampleData(Dataset):
         query_k,
         device,
         output_size,
+        iter,
         num_op=None,
         real_scanned=False,
     ):
@@ -281,7 +282,7 @@ class UpsampleData(Dataset):
             knn_std = torch.std(knn_coords, 1)
             std_avg = torch.mean(knn_std, 0)
             std_std = torch.std(knn_std, 0)
-            valid_idx = torch.mean(knn_std, 1) > torch.mean(std_avg, 0)
+            valid_idx = torch.mean(knn_std, 1) > torch.mean(std_avg, 0) * 0.99**iter
 
             std_std[0] *= 5
             std_std[1] *= 3
@@ -348,12 +349,15 @@ class UpsampleData(Dataset):
             valid_idx = torch.sum(torch.abs(target - point_avg) < point_std, 1) == 3
             target = target[valid_idx]
 
+            perm = torch.randperm(target.size(0))
+            target = target[perm]
+
             target_df = pd.DataFrame(
                 target.cpu().numpy(),
                 columns=["x", "y", "z"],
             )
             target = torch.tensor(
-                farthest_point_sampling(target_df, output_size // 16)[
+                farthest_point_sampling(target_df, output_size // 8)[
                     ["x", "y", "z"]
                 ].values
             )

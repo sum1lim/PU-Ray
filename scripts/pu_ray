@@ -50,6 +50,7 @@ def main(args):
 
     total_time = time.time()
     inference_time = 0
+    iter = 0
     while len(updating_pc) < len(input_df) * args.r:
         pc_data = UpsampleData(
             input_pc,
@@ -59,6 +60,7 @@ def main(args):
             query_k=args.query_k,
             output_size=len(input_df) * args.r,
             device=device,
+            iter=iter,
             num_op=args.num_op,
             real_scanned=args.real_scanned,
         )
@@ -97,22 +99,20 @@ def main(args):
 
             output_coords = (output_coords * scaling_factor.squeeze(1)).detach().cpu()
             output_coords += op_pos
-
             if args.real_scanned:
                 valid_idx = noise_removal(output_coords, input_pc, updating_pc)
+                output_coords = output_coords[valid_idx]
+                scaling_factor = scaling_factor[valid_idx]
+                implicit_points = implicit_points[valid_idx]
+                op_pos = op_pos[valid_idx]
+                step_idx = step_idx[valid_idx.detach().cpu()]
 
-            updating_pc = torch.cat([updating_pc, output_coords[valid_idx]], dim=0)
+            updating_pc = torch.cat([updating_pc, output_coords], dim=0)
 
             if args.marching_steps:
-                implicit_points = (
-                    (implicit_points[valid_idx] * scaling_factor[valid_idx])
-                    .detach()
-                    .cpu()
-                )
-                implicit_points += op_pos[valid_idx].unsqueeze(1)
-                implicit_points = torch.cat(
-                    (implicit_points, step_idx[valid_idx.detach().cpu()]), 2
-                )
+                implicit_points = (implicit_points * scaling_factor).detach().cpu()
+                implicit_points += op_pos.unsqueeze(1)
+                implicit_points = torch.cat((implicit_points, step_idx), 2)
                 implicit_points = torch.flatten(implicit_points, 0, 1)
                 implicit_pc.append(torch.cat([implicit_points], dim=0))
 
@@ -136,6 +136,7 @@ def main(args):
             gc.collect()
             torch.cuda.empty_cache()
 
+        iter += 1
         garbage_collect(pc_data.__dict__.values())
 
     print(f"Inference time: {inference_time} sec")
