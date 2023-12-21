@@ -282,7 +282,7 @@ class UpsampleData(Dataset):
             knn_std = torch.std(knn_coords, 1)
             std_avg = torch.mean(knn_std, 0)
             std_std = torch.std(knn_std, 0)
-            valid_idx = torch.mean(knn_std, 1) > torch.mean(std_avg, 0) * 0.99**iter
+            valid_idx = torch.mean(knn_std, 1) > torch.mean(std_avg, 0) * 0.999**iter
 
             std_std[0] *= 5
             std_std[1] *= 3
