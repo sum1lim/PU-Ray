@@ -357,7 +357,7 @@ class UpsampleData(Dataset):
                 columns=["x", "y", "z"],
             )
             target = torch.tensor(
-                farthest_point_sampling(target_df, output_size // 8)[
+                farthest_point_sampling(target_df, output_size // 16)[
                     ["x", "y", "z"]
                 ].values
             )
