@@ -28,6 +28,21 @@ def main(args):
             continue
         print(f)
 
+        input_chunks = torch.chunk(input_pc, len(input_pc) // 64)
+        input_pc = []
+        for chunk in input_chunks:
+            input_pc.append(
+                KNN(
+                    gt_pc,
+                    chunk,
+                    1,
+                    include_nearest=True,
+                    cossim=False,
+                )[0].squeeze()
+            )
+
+        input_pc = torch.cat(input_pc, 0)
+
         gt_chunks = torch.chunk(gt_pc, len(gt_pc) // 1024)
         knn_std = []
         knn_mean = []
@@ -37,17 +52,14 @@ def main(args):
                 chunk,
                 16,
                 include_nearest=True,
-                cossim=False,
+                cossim=True,
             )
             knn_std.append(torch.std(knn_coords, 1))
             knn_mean.append(torch.mean(knn_coords, 1))
 
         knn_std = torch.cat(knn_std, 0)
         knn_mean = torch.cat(knn_mean, 0)
-        valid_idx = (
-            torch.sum(torch.abs(gt_pc[:, :2] - knn_mean[:, :2]) < knn_std[:, :2], 1)
-            == 2
-        )
+        valid_idx = torch.sum(torch.abs(gt_pc - knn_mean) < knn_std, 1) == 3
 
         gt_pc = gt_pc[valid_idx]
         knn_std = knn_std[valid_idx]
