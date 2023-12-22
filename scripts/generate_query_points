@@ -59,14 +59,14 @@ def main(args):
 
         knn_std = torch.cat(knn_std, 0)
         knn_mean = torch.cat(knn_mean, 0)
-        valid_idx = torch.sum(torch.abs(gt_pc - knn_mean) < knn_std, 1) == 3
+        valid_idx = torch.sum(torch.abs(gt_pc - knn_mean) < knn_std * 1.5, 1) == 3
 
         gt_pc = gt_pc[valid_idx]
         knn_std = knn_std[valid_idx]
 
         std_avg = torch.mean(knn_std, 0)
         std_std = torch.std(knn_std, 0)
-        valid_idx = torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
+        valid_idx = torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
 
         query_points = gt_pc[valid_idx]
         query_points = pd.DataFrame(
