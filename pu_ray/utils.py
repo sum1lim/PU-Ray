@@ -509,19 +509,17 @@ def farthest_point_sampling(pc, num_sample):
         ).T
     )
     np.random.shuffle(vertices)
-    pcd = o3d.t.geometry.PointCloud(
-        o3c.Tensor(vertices, o3c.float64, o3c.Device("cuda:0"))
-    )
-    # pcd = o3d.geometry.PointCloud()
-    # pcd.points = o3d.utility.Vector3dVector(vertices)
+    # pcd = o3d.t.geometry.PointCloud(
+    #     o3c.Tensor(vertices, o3c.float64, o3c.Device("cuda:0"))
+    # )
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(vertices)
 
     try:
         downsampled = pcd.farthest_point_down_sample(num_sample)
     except RuntimeError:
         downsampled = pcd
-    downsampled = pd.DataFrame(
-        np.asarray(downsampled.point.positions.cpu().numpy()), columns=["x", "y", "z"]
-    )
+    downsampled = pd.DataFrame(np.asarray(downsampled.points), columns=["x", "y", "z"])
 
     return downsampled
 

@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import torch
+import numpy as np
+import pandas as pd
+from pu_ray.utils import KNN, farthest_point_sampling
+
+
+def main(args):
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    try:
+        os.mkdir(f"{args.input}/query_points")
+    except FileExistsError:
+        None
+
+    file_li = os.listdir(args.input)
+    for f in file_li:
+        try:
+            input_pc = torch.tensor(pd.read_csv(f"{args.input}/{f}").values).to(device)
+            gt_pc = torch.tensor(pd.read_csv(f"{args.gt}/{f}").values).to(device)
+        except IsADirectoryError:
+            continue
+        print(f)
+
+        gt_chunks = torch.chunk(gt_pc, len(gt_pc) // 1024)
+        knn_std = []
+        knn_mean = []
+        for chunk in gt_chunks:
+            knn_coords, _ = KNN(
+                input_pc,
+                chunk,
+                16,
+                include_nearest=True,
+                cossim=False,
+            )
+            knn_std.append(torch.std(knn_coords, 1))
+            knn_mean.append(torch.mean(knn_coords, 1))
+
+        knn_std = torch.cat(knn_std, 0)
+        knn_mean = torch.cat(knn_mean, 0)
+        valid_idx = (
+            torch.sum(torch.abs(gt_pc[:, :2] - knn_mean[:, :2]) < knn_std[:, :2], 1)
+            == 2
+        )
+
+        gt_pc = gt_pc[valid_idx]
+        knn_std = knn_std[valid_idx]
+
+        std_avg = torch.mean(knn_std, 0)
+        std_std = torch.std(knn_std, 0)
+        valid_idx = torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
+
+        query_points = gt_pc[valid_idx]
+        query_points = pd.DataFrame(
+            query_points.cpu().numpy(),
+            columns=["x", "y", "z"],
+        )
+        query_points = farthest_point_sampling(query_points, len(input_pc) * args.r)[
+            ["x", "y", "z"]
+        ]
+
+        np.savetxt(f"{args.input}/query_points/{f}", query_points, delimiter=",")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--input",
+        type=str,
+        help="Input point cloud directory path",
+    )
+    parser.add_argument(
+        "--gt",
+        type=str,
+        help="Ground truth directory path",
+    )
+    parser.add_argument(
+        "--r",
+        type=int,
+        default=16,
+        help="Upsampling rate",
+    )
+
+    args = parser.parse_args()
+
+    main(args)
