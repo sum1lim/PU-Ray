@@ -15,7 +15,7 @@ def main(args):
     print(device)
 
     try:
-        os.mkdir(f"{args.input}/query_points")
+        os.mkdir(f"{args.input}_query_points")
     except FileExistsError:
         None
 
@@ -27,32 +27,38 @@ def main(args):
         except IsADirectoryError:
             continue
         print(f)
+        if os.path.isfile(f"{args.input}_query_points/{f}"):
+            continue
 
-        input_chunks = torch.chunk(input_pc, len(input_pc) // 64)
-        input_pc = []
-        for chunk in input_chunks:
-            input_pc.append(
-                KNN(
-                    gt_pc,
-                    chunk,
-                    1,
-                    include_nearest=True,
-                    cossim=False,
-                )[0].squeeze()
-            )
+        num_chunks = 256
+        while True:
+            try:
+                input_chunks = torch.chunk(input_pc, num_chunks)
 
-        input_pc = torch.cat(input_pc, 0)
+                input_chunks_li = []
+                for chunk in input_chunks:
+                    input_chunks_li.append(
+                        KNN(
+                            gt_pc,
+                            chunk,
+                            1,
+                            include_nearest=True,
+                            cossim=False,
+                            device=device,
+                        )[0].squeeze(1)
+                    )
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
 
-        gt_chunks = torch.chunk(gt_pc, len(gt_pc) // 1024)
+        input_pc = torch.cat(input_chunks_li, 0)
+
+        gt_chunks = torch.chunk(gt_pc, num_chunks)
         knn_std = []
         knn_mean = []
         for chunk in gt_chunks:
             knn_coords, _ = KNN(
-                input_pc,
-                chunk,
-                16,
-                include_nearest=True,
-                cossim=True,
+                input_pc, chunk, 16, include_nearest=True, cossim=True, device=device
             )
             knn_std.append(torch.std(knn_coords, 1))
             knn_mean.append(torch.mean(knn_coords, 1))
@@ -77,7 +83,7 @@ def main(args):
             ["x", "y", "z"]
         ]
 
-        np.savetxt(f"{args.input}/query_points/{f}", query_points, delimiter=",")
+        np.savetxt(f"{args.input}_query_points/{f}", query_points, delimiter=",")
 
 
 if __name__ == "__main__":
