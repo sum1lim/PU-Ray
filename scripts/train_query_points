@@ -36,7 +36,6 @@ def main(args):
         args.gt,
         device=device,
     )
-    print(f"Number of training queries: {len(train_dataset)}", file=log_target)
 
     # Train-validation split
     train_dataset, val_dataset = torch.utils.data.random_split(
