@@ -82,7 +82,7 @@ def main(args):
             output_pc = model(input_pc)
 
             # Update
-            loss += loss_function(output_pc, gt_pc)
+            loss = loss_function(output_pc, gt_pc)
 
             batch_loss += loss
             batch_count += 1
