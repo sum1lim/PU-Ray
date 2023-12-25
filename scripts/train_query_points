@@ -46,7 +46,7 @@ def main(args):
     data_loader = DataLoader(
         train_dataset,
         num_workers=0,
-        batch_size=1,
+        batch_size=args.batch_size,
         shuffle=True,
         drop_last=True,
     )
@@ -64,7 +64,7 @@ def main(args):
     loss_function = ChamferLoss(device, batch_size=1).to(device)
 
     # Learning strategy
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-3)
     scheduler = optim.lr_scheduler.ExponentialLR(
         optimizer, 0.9, last_epoch=-1, verbose=False
@@ -185,6 +185,12 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="Number of epochs",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=4,
+        help="Batch size",
     )
 
     args = parser.parse_args()
