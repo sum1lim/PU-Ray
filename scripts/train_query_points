@@ -75,7 +75,7 @@ def main(args):
         # Training
         count = 0
         train_loss = 0.0
-        for input_pc, gt_pc in enumerate(data_loader):
+        for _, (input_pc, gt_pc) in tqdm(enumerate(data_loader)):
             # Predict
             output_pc = model(input_pc)
 
