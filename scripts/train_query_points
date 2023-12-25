@@ -90,7 +90,6 @@ def main(args):
 
         scheduler.step()
 
-        errs = torch.cat(errs, 0)
         outstr = f"Epoch {epoch}, Loss: {(train_loss / count)}"
         print(outstr, file=log_target)
 
