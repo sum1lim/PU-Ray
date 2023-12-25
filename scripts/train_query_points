@@ -2,6 +2,7 @@
 import argparse
 import sys
 import torch
+import gc
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -88,6 +89,18 @@ def main(args):
             train_loss += loss.detach().cpu() * input_pc.shape[0]
             count += input_pc.shape[0]
 
+            # garbage collect
+            input_pc = input_pc.detach().cpu()
+            gt_pc = gt_pc.detach().cpu()
+            output_pc = output_pc.detach().cpu()
+            del (
+                input_pc,
+                gt_pc,
+                output_pc,
+            )
+            gc.collect()
+            torch.cuda.empty_cache()
+
         scheduler.step()
 
         outstr = f"Epoch {epoch}, Loss: {(train_loss / count)}"
@@ -106,6 +119,18 @@ def main(args):
 
             # Error calculation
             val_count += val_input_pc.shape[0]
+
+            # garbage collect
+            val_input_pc = val_input_pc.detach().cpu()
+            val_gt_pc = val_gt_pc.detach().cpu()
+            val_output_pc = val_output_pc.detach().cpu()
+            del (
+                val_input_pc,
+                val_gt_pc,
+                val_output_pc,
+            )
+            gc.collect()
+            torch.cuda.empty_cache()
 
         outstr = f"Validation Loss: {val_loss / val_count}"
         print(outstr, file=log_target)
