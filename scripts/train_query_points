@@ -74,20 +74,34 @@ def main(args):
     for epoch in range(args.num_epochs):
         # Training
         count = 0
+        batch_count = 0
         train_loss = 0.0
-        for _, (input_pc, gt_pc) in tqdm(enumerate(data_loader)):
+        batch_loss = 0.0
+        for idx, (input_pc, gt_pc) in tqdm(enumerate(data_loader)):
             # Predict
             output_pc = model(input_pc)
 
             # Update
-            optimizer.zero_grad()
-            loss = loss_function(output_pc, gt_pc)
-            loss.backward()
-            print(loss)
-            optimizer.step()
+            loss += loss_function(output_pc, gt_pc)
 
-            train_loss += loss.detach().cpu() * input_pc.shape[0]
-            count += input_pc.shape[0]
+            batch_loss += loss
+            batch_count += 1
+
+            train_loss += loss
+            count += 1
+
+            if (idx + 1) % args.batch_size == 0 or idx == len(data_loader) - 1:
+                optimizer.zero_grad()
+                batch_loss = batch_loss / batch_count
+                batch_loss.backward()
+                optimizer.step()
+
+                print(
+                    f"Batch # {(idx) // args.batch_size + 1} loss: {batch_loss.item()}"
+                )
+
+                batch_loss = 0.0
+                batch_count = 0
 
             # garbage collect
             input_pc = input_pc.detach().cpu()
@@ -185,6 +199,12 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="Number of epochs",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=4,
+        help="Batch size",
     )
 
     args = parser.parse_args()
