@@ -13,6 +13,51 @@ from torch import nn, cos, sin
 from collections import OrderedDict
 
 
+class QueryPointsData(Dataset):
+    def __init__(
+        self,
+        input_dir,
+        gt_dir,
+        device,
+    ):
+        self.device = device
+
+        file_li = os.listdir(input_dir)
+
+        self.input_li = []
+        self.gt_li = []
+        for filename in tqdm(file_li):
+            input_df = pd.read_csv(f"{input_dir}/{filename}", names=["x", "y", "z"])
+            input_df = input_df[input_df["x"] > 50000]
+            input_df = input_df[input_df.abs()["y"] < 30000]
+            input_df = input_df[input_df.abs()["z"] < 30000]
+            input_df /= 120000
+            self.input_li.append(
+                torch.tensor(input_df.sample(frac=1).values).double().to("cpu")
+            )
+
+            gt_df = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
+            gt_df = gt_df[gt_df["x"] > 50000]
+            gt_df = gt_df[gt_df.abs()["y"] < 30000]
+            gt_df = gt_df[gt_df.abs()["z"] < 30000]
+            gt_df /= 120000
+            self.gt_li.append(
+                torch.tensor(gt_df.sample(frac=1).values).double().to("cpu")
+            )
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        return (
+            self.input_li[idx].to(self.device),
+            self.gt_li[idx].to(self.device),
+        )
+
+    def __len__(self):
+        return len(self.input_li)
+
+
 class TrainData(Dataset):
     """
     A Torch Dataset class to import point cloud data
@@ -720,6 +765,36 @@ class RayMarchingLoss(nn.Module):
                 + marching_step_loss * self.ray_marching_loss
                 + epsilon_loss
             )
+
+
+class ChamferLoss(nn.Module):
+    def __init__(self, device, batch_size):
+        super().__init__()
+        self.device = device
+        self.batch_size = batch_size
+
+    def forward(self, output_pc, gt_pc):
+        idx = 0
+        chamfer_distances = 0
+        while idx < output_pc.shape[0]:
+            pc1 = output_pc[idx].cpu()
+            pc2 = gt_pc[idx].cpu()
+            dist1 = torch.norm(
+                pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+                dim=2,
+            )[:, 0]
+            dist2 = torch.norm(
+                pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+                dim=2,
+            )[:, 0]
+
+            chamfer_distances += torch.mean(dist1) + torch.mean(dist2)
+
+            idx += 1
+
+        return chamfer_distances / idx
 
 
 def garbage_collect(items):

@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import torch
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+from pu_ray.utils import QueryPointsData, ChamferLoss
+from pu_ray.models import QueryPoints
+from torch.utils.data import DataLoader
+from torch import nn
+import torch.optim as optim
+
+
+def main(args):
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    if args.verbose:
+        log_target = sys.stdout
+    else:
+        log_target = open(f"./log/{args.log}.log", "w")
+
+    # Load the model
+    model = nn.DataParallel(QueryPoints(device=device)).to(device)
+    print(
+        f"Number of parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}"
+    )
+
+    train_dataset = QueryPointsData(
+        args.input,
+        args.gt,
+        device=device,
+    )
+    print(f"Number of training queries: {len(train_dataset)}", file=log_target)
+
+    # Train-validation split
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset, [0.8, 0.2]
+    )
+    # Data loader
+    data_loader = DataLoader(
+        train_dataset,
+        num_workers=0,
+        batch_size=1,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    # Data loader
+    val_data_loader = DataLoader(
+        val_dataset,
+        num_workers=0,
+        batch_size=1,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    # Loss function
+    loss_function = ChamferLoss(device, batch_size=1).to(device)
+
+    # Learning strategy
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
+    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-3)
+    scheduler = optim.lr_scheduler.ExponentialLR(
+        optimizer, 0.99, last_epoch=-1, verbose=False
+    )
+
+    best = np.inf
+    for epoch in range(args.num_epochs):
+        # Training
+        count = 0
+        train_loss = 0.0
+        for input_pc, gt_pc in data_loader:
+            # Predict
+            output_pc = model(input_pc)
+
+            # Update
+            optimizer.zero_grad()
+            loss = loss_function(output_pc, gt_pc)
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss.detach().cpu() * input_pc.shape[0]
+            count += input_pc.shape[0]
+
+        scheduler.step()
+
+        errs = torch.cat(errs, 0)
+        outstr = f"Epoch {epoch}, Loss: {(train_loss / count)}"
+        print(outstr, file=log_target)
+
+        # Validation
+        val_count = 0.0
+        val_loss = 0.0
+        for val_input_pc, val_gt_pc in val_data_loader:
+            # Predict
+            val_output_pc = model(val_input_pc)
+
+            # Loss calcuation
+            loss = loss_function(val_output_pc, val_gt_pc)
+            val_loss += loss.detach().cpu() * val_input_pc.shape[0]
+
+            # Error calculation
+            val_count += val_input_pc.shape[0]
+
+        outstr = f"Validation Loss: {val_loss / val_count}"
+        print(outstr, file=log_target)
+
+        # Save the model
+        if val_loss < best:
+            best = val_loss
+            print(f"Save model to ./models/{args.log}.pt", file=log_target)
+            torch.save(model.state_dict(), f"./models/{args.log}.pt")
+
+        log_target.flush()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--input",
+        type=str,
+        help="Input point cloud directory path",
+    )
+    parser.add_argument(
+        "--gt",
+        type=str,
+        help="Ground truth directory path",
+    )
+    parser.add_argument(
+        "--r",
+        type=int,
+        default=16,
+        help="Upsampling rate",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print to stdout",
+    )
+    parser.add_argument(
+        "--log",
+        type=str,
+        default="log",
+        help="log file name",
+    )
+    parser.add_argument(
+        "--num-epochs",
+        type=int,
+        default=100,
+        help="Number of epochs",
+    )
+
+    args = parser.parse_args()
+
+    main(args)

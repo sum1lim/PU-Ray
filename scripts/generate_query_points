@@ -4,6 +4,7 @@ import os
 import torch
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pu_ray.utils import KNN, farthest_point_sampling
 
 
@@ -20,10 +21,19 @@ def main(args):
         None
 
     file_li = os.listdir(args.input)
-    for f in file_li:
+    for idx, f in tqdm(enumerate(file_li)):
         try:
-            input_pc = torch.tensor(pd.read_csv(f"{args.input}/{f}").values).to(device)
-            gt_pc = torch.tensor(pd.read_csv(f"{args.gt}/{f}").values).to(device)
+            input_df = pd.read_csv(f"{args.input}/{f}", names=["x", "y", "z"])
+            input_df = input_df[input_df["x"] > 50000]
+            input_df = input_df[input_df.abs()["y"] < 30000]
+            input_df = input_df[input_df.abs()["z"] < 30000]
+            input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
+
+            gt_df = pd.read_csv(f"{args.gt}/{f}", names=["x", "y", "z"])
+            gt_df = gt_df[gt_df["x"] > 50000]
+            gt_df = gt_df[gt_df.abs()["y"] < 30000]
+            gt_df = gt_df[gt_df.abs()["z"] < 30000]
+            gt_pc = torch.tensor(gt_df.sample(frac=1).values).to(device)
         except IsADirectoryError:
             continue
         print(f)

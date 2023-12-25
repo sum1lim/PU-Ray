@@ -220,12 +220,7 @@ class PUray(nn.Module):
                 rel_vectors,
                 rel_depths,
             ) = self.marching(knn_coords, op)
-            (
-                march_step,
-                op,
-                implicit_point,
-                cossim,
-            ) = self.marching_step(
+            (march_step, op, implicit_point, cossim,) = self.marching_step(
                 feats, rel_vectors, rel_depths, query, cumulative_depth, ca_li
             )
 
@@ -268,3 +263,57 @@ class PUray(nn.Module):
             module.weight.data.uniform_(-stdv, stdv)
             if module.bias is not None:
                 module.bias.data.uniform_(-stdv, stdv)
+
+
+class QueryPoints(nn.Module):
+    def __init__(self, *, device):
+        super().__init__()
+        self.device = device
+
+        self.point_encoding = (
+            nn.Sequential(
+                nn.Linear(3, 16),
+                nn.ReLU(),
+                nn.Linear(16, 32),
+                nn.ReLU(),
+                nn.Linear(32, 64),
+            )
+            .double()
+            .to(device)
+        )
+
+        self.attn = (
+            PointTransformerLayer(
+                dim=64,
+                pos_mlp_hidden_dim=64,
+                attn_mlp_hidden_mult=1,
+                num_neighbors=16,
+            )
+            .double()
+            .to(device)
+        )
+
+        self.point_decoding = (
+            nn.Sequential(
+                nn.Linear(4, 4),
+                nn.ReLU(),
+                nn.Linear(4, 3),
+            )
+            .double()
+            .to(device)
+        )
+
+    def forward(self, input_pc):
+        input_pc = input_pc.double().to(self.device)
+
+        feats = self.point_encoding(input_pc)
+
+        feats = self.attn(feats, input_pc)
+        feats = self.attn(feats, input_pc)
+        feats = self.attn(feats, input_pc)
+
+        feats = feats.reshape(feats.shape[0], feats.shape[1] * 16, feats.shape[2] // 16)
+
+        output_pc = self.point_decoding(feats)
+
+        return output_pc
