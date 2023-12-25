@@ -272,22 +272,74 @@ class QueryPoints(nn.Module):
 
         self.point_encoding = (
             nn.Sequential(
-                nn.Linear(3, 16),
+                nn.Linear(3, 8),
                 nn.ReLU(),
-                nn.Linear(16, 32),
+                nn.Linear(8, 8),
                 nn.ReLU(),
-                nn.Linear(32, 64),
+                nn.Linear(8, 8),
             )
             .double()
             .to(device)
         )
 
-        self.attn = (
+        self.attn_1 = (
             PointTransformerLayer(
-                dim=64,
-                pos_mlp_hidden_dim=64,
+                dim=8,
+                pos_mlp_hidden_dim=8,
                 attn_mlp_hidden_mult=1,
                 num_neighbors=16,
+            )
+            .double()
+            .to(device)
+        )
+
+        self.feat_expansion_1 = (
+            nn.Sequential(
+                nn.Linear(8, 16),
+                nn.ReLU(),
+                nn.Linear(16, 16),
+            )
+            .double()
+            .to(device)
+        )
+
+        self.attn_2 = (
+            PointTransformerLayer(
+                dim=16,
+                pos_mlp_hidden_dim=16,
+                attn_mlp_hidden_mult=1,
+                num_neighbors=16,
+            )
+            .double()
+            .to(device)
+        )
+
+        self.feat_expansion_2 = (
+            nn.Sequential(
+                nn.Linear(16, 32),
+                nn.ReLU(),
+                nn.Linear(32, 32),
+            )
+            .double()
+            .to(device)
+        )
+
+        self.attn_3 = (
+            PointTransformerLayer(
+                dim=32,
+                pos_mlp_hidden_dim=32,
+                attn_mlp_hidden_mult=1,
+                num_neighbors=16,
+            )
+            .double()
+            .to(device)
+        )
+
+        self.feat_expansion_3 = (
+            nn.Sequential(
+                nn.Linear(32, 64),
+                nn.ReLU(),
+                nn.Linear(64, 64),
             )
             .double()
             .to(device)
@@ -308,9 +360,9 @@ class QueryPoints(nn.Module):
 
         feats = self.point_encoding(input_pc)
 
-        feats = self.attn(feats, input_pc)
-        feats = self.attn(feats, input_pc)
-        feats = self.attn(feats, input_pc)
+        feats = self.feat_expansion_1(self.attn_1(feats, input_pc))
+        feats = self.feat_expansion_2(self.attn_2(feats, input_pc))
+        feats = self.feat_expansion_3(self.attn_3(feats, input_pc))
 
         feats = feats.reshape(feats.shape[0], feats.shape[1] * 16, feats.shape[2] // 16)
 
