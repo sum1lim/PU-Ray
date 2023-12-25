@@ -64,10 +64,10 @@ def main(args):
     loss_function = ChamferLoss(device, batch_size=1).to(device)
 
     # Learning strategy
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-3)
     scheduler = optim.lr_scheduler.ExponentialLR(
-        optimizer, 0.99, last_epoch=-1, verbose=False
+        optimizer, 0.9, last_epoch=-1, verbose=False
     )
 
     best = np.inf
@@ -75,7 +75,7 @@ def main(args):
         # Training
         count = 0
         train_loss = 0.0
-        for input_pc, gt_pc in data_loader:
+        for input_pc, gt_pc in enumerate(data_loader):
             # Predict
             output_pc = model(input_pc)
 
@@ -83,6 +83,7 @@ def main(args):
             optimizer.zero_grad()
             loss = loss_function(output_pc, gt_pc)
             loss.backward()
+            print(loss)
             optimizer.step()
 
             train_loss += loss.detach().cpu() * input_pc.shape[0]
