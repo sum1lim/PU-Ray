@@ -283,7 +283,7 @@ class QueryPoints(nn.Module):
             .to(device)
         )
 
-        self.attn_1 = CrossAttention(device=self.device, hidden_size=322, mult=1)
+        self.attn_1 = CrossAttention(device=self.device, hidden_size=32, mult=1)
 
         self.feat_expansion_1 = (
             nn.Sequential(
