@@ -813,7 +813,7 @@ class ChamferLoss(nn.Module):
                 1,
             )[0]
 
-        return torch.mean(dist1) + torch.mean(dist2)
+        return (torch.mean(dist1) + torch.mean(dist2)).cpu()
 
 
 def garbage_collect(items):
