@@ -1,6 +1,7 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+from pu_ray.utils import KNN
 from point_transformer_pytorch import PointTransformerLayer
 
 
@@ -282,16 +283,7 @@ class QueryPoints(nn.Module):
             .to(device)
         )
 
-        self.attn_1 = (
-            PointTransformerLayer(
-                dim=8,
-                pos_mlp_hidden_dim=8,
-                attn_mlp_hidden_mult=1,
-                num_neighbors=16,
-            )
-            .double()
-            .to(device)
-        )
+        self.attn_1 = CrossAttention(device=self.device, hidden_size=8, mult=1)
 
         self.feat_expansion_1 = (
             nn.Sequential(
@@ -303,16 +295,7 @@ class QueryPoints(nn.Module):
             .to(device)
         )
 
-        self.attn_2 = (
-            PointTransformerLayer(
-                dim=16,
-                pos_mlp_hidden_dim=16,
-                attn_mlp_hidden_mult=1,
-                num_neighbors=16,
-            )
-            .double()
-            .to(device)
-        )
+        self.attn_2 = CrossAttention(device=self.device, hidden_size=16, mult=1)
 
         self.feat_expansion_2 = (
             nn.Sequential(
@@ -324,16 +307,7 @@ class QueryPoints(nn.Module):
             .to(device)
         )
 
-        self.attn_3 = (
-            PointTransformerLayer(
-                dim=32,
-                pos_mlp_hidden_dim=32,
-                attn_mlp_hidden_mult=1,
-                num_neighbors=16,
-            )
-            .double()
-            .to(device)
-        )
+        self.attn_3 = CrossAttention(device=self.device, hidden_size=32, mult=1)
 
         self.feat_expansion_3 = (
             nn.Sequential(
@@ -356,15 +330,26 @@ class QueryPoints(nn.Module):
         )
 
     def forward(self, input_pc):
-        input_pc = input_pc.double().to(self.device)
+        input_pc = input_pc.squeeze().double().to(self.device)
+        input_knn, knn_indices = KNN(
+            input_pc, input_pc, 16, include_nearest=True, cossim=True
+        )
+        rel_pos = input_knn - input_pc.unsqueeze(1)
 
-        feats = self.point_encoding(input_pc)
+        knn_feats = self.point_encoding(input_knn)
+        input_feats = knn_feats[:, 0, :]
 
-        feats = self.feat_expansion_1(self.attn_1(feats, input_pc))
-        feats = self.feat_expansion_2(self.attn_2(feats, input_pc))
-        feats = self.feat_expansion_3(self.attn_3(feats, input_pc))
+        feats = self.feat_expansion_1(self.attn_1(input_feats, knn_feats, rel_pos))
+        knn_feats = feats[knn_indices]
+        input_feats = knn_feats[:, 0, :]
+        feats = self.feat_expansion_2(self.attn_2(input_feats, knn_feats, rel_pos))
+        knn_feats = feats[knn_indices]
+        input_feats = knn_feats[:, 0, :]
+        feats = self.feat_expansion_3(self.attn_3(input_feats, knn_feats, rel_pos))
+        knn_feats = feats[knn_indices]
+        input_feats = knn_feats[:, 0, :]
 
-        feats = feats.reshape(feats.shape[0], feats.shape[1] * 16, feats.shape[2] // 16)
+        feats = feats.reshape(feats.shape[0] * 16, feats.shape[1] // 16)
 
         output_pc = self.point_decoding(feats)
 
