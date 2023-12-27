@@ -334,7 +334,12 @@ class QueryPoints(nn.Module):
     def forward(self, input_pc):
         input_pc = input_pc.squeeze().double().to(self.device)
         input_knn, knn_indices = KNN(
-            input_pc, input_pc, 16, include_nearest=True, cossim=True
+            input_pc,
+            input_pc,
+            16,
+            include_nearest=True,
+            cossim=True,
+            device=self.device,
         )
         rel_pos = input_knn - input_pc.unsqueeze(1)
 

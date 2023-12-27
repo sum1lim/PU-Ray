@@ -774,24 +774,44 @@ class ChamferLoss(nn.Module):
         self.batch_size = batch_size
 
     def forward(self, output_pc, gt_pc):
-        pc1 = output_pc.squeeze().cpu()
-        pc2 = gt_pc.squeeze().cpu()
-        dist1 = torch.min(
-            torch.norm(
-                pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
-                dim=2,
-            ),
-            1,
-        )[0]
-        dist2 = torch.min(
-            torch.norm(
-                pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
-                dim=2,
-            ),
-            1,
-        )[0]
+        try:
+            pc1 = output_pc.squeeze()
+            pc2 = gt_pc.squeeze()
+            dist1 = torch.min(
+                torch.norm(
+                    pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                    - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+                    dim=2,
+                ),
+                1,
+            )[0]
+            dist2 = torch.min(
+                torch.norm(
+                    pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                    - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+                    dim=2,
+                ),
+                1,
+            )[0]
+        except torch.cuda.OutOfMemoryError:
+            pc1 = output_pc.squeeze().cpu()
+            pc2 = gt_pc.squeeze().cpu()
+            dist1 = torch.min(
+                torch.norm(
+                    pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                    - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+                    dim=2,
+                ),
+                1,
+            )[0]
+            dist2 = torch.min(
+                torch.norm(
+                    pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                    - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+                    dim=2,
+                ),
+                1,
+            )[0]
 
         return torch.mean(dist1) + torch.mean(dist2)
 
