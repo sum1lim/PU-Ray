@@ -359,7 +359,7 @@ class QueryPoints(nn.Module):
         knn_feats = feats[knn_indices]
 
         feats = feats.reshape(feats.shape[0] * 16, feats.shape[1] // 16)
-        feats = feats * torch.randn(feats.shape)
+        feats = feats * torch.randn(feats.shape).to(self.device)
 
         output_pc = self.point_decoding(feats)
 
