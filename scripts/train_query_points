@@ -67,7 +67,7 @@ def main(args):
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-3)
     scheduler = optim.lr_scheduler.ExponentialLR(
-        optimizer, 0.9, last_epoch=-1, verbose=False
+        optimizer, 0.8, last_epoch=-1, verbose=False
     )
 
     best = np.inf
