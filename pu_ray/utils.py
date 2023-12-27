@@ -791,6 +791,8 @@ class ChamferLoss(nn.Module):
             1,
         )[0]
 
+        chamfer_distance = (torch.mean(dist1) + torch.mean(dist2)).cpu()
+
         pc1 = pc1.detach().cpu()
         pc2 = pc2.detach().cpu()
         dist1 = dist1.detach().cpu()
@@ -804,7 +806,7 @@ class ChamferLoss(nn.Module):
         gc.collect()
         torch.cuda.empty_cache()
 
-        return (torch.mean(dist1) + torch.mean(dist2)).cpu()
+        return chamfer_distance
 
 
 def garbage_collect(items):
