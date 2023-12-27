@@ -347,21 +347,15 @@ class QueryPoints(nn.Module):
         feats = knn_feats[:, 0, :]
 
         attn = self.attn_1(feats, knn_feats, rel_pos)
-        feats = self.feat_1(
-            torch.cat([feats, attn * torch.randn(feats.shape).to(self.device)], -1)
-        )
+        feats = self.feat_1(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_2(feats, knn_feats, rel_pos)
-        feats = self.feat_2(
-            torch.cat([feats, attn * torch.randn(feats.shape).to(self.device)], -1)
-        )
+        feats = self.feat_2(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_3(feats, knn_feats, rel_pos)
-        feats = self.feat_3(
-            torch.cat([feats, attn * torch.randn(feats.shape).to(self.device)], -1)
-        )
+        feats = self.feat_3(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         feats = feats.reshape(feats.shape[0] * 16, feats.shape[1] // 16)
