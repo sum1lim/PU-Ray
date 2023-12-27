@@ -284,8 +284,40 @@ class QueryPoints(nn.Module):
         )
 
         self.attn_1 = CrossAttention(device=self.device, hidden_size=32, mult=4)
+
+        self.feat_1 = (
+            nn.Sequential(
+                nn.Linear(64, 64),
+                nn.ReLU(),
+                nn.Linear(64, 64),
+            )
+            .double()
+            .to(device)
+        )
+
         self.attn_2 = CrossAttention(device=self.device, hidden_size=64, mult=4)
+
+        self.feat_2 = (
+            nn.Sequential(
+                nn.Linear(128, 128),
+                nn.ReLU(),
+                nn.Linear(128, 128),
+            )
+            .double()
+            .to(device)
+        )
+
         self.attn_3 = CrossAttention(device=self.device, hidden_size=128, mult=4)
+
+        self.feat_3 = (
+            nn.Sequential(
+                nn.Linear(256, 256),
+                nn.ReLU(),
+                nn.Linear(256, 256),
+            )
+            .double()
+            .to(device)
+        )
 
         self.point_decoding = (
             nn.Sequential(
@@ -315,15 +347,15 @@ class QueryPoints(nn.Module):
         feats = knn_feats[:, 0, :]
 
         attn = self.attn_1(feats, knn_feats, rel_pos)
-        feats = torch.cat([feats, attn * torch.randn(attn.shape).to(self.device)], -1)
+        feats = self.feat_1(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_2(feats, knn_feats, rel_pos)
-        feats = torch.cat([feats, attn * torch.randn(attn.shape).to(self.device)], -1)
+        feats = self.feat_2(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_3(feats, knn_feats, rel_pos)
-        feats = torch.cat([feats, attn * torch.randn(attn.shape).to(self.device)], -1)
+        feats = self.feat_3(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         feats = feats.reshape(feats.shape[0] * 16, feats.shape[1] // 16)
