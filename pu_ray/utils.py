@@ -768,50 +768,28 @@ class RayMarchingLoss(nn.Module):
 
 
 class ChamferLoss(nn.Module):
-    def __init__(self, device, batch_size):
+    def __init__(self):
         super().__init__()
-        self.device = device
-        self.batch_size = batch_size
 
-    def forward(self, output_pc, gt_pc):
-        try:
-            pc1 = output_pc.squeeze()
-            pc2 = gt_pc.squeeze()
-            dist1 = torch.min(
-                torch.norm(
-                    pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                    - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
-                    dim=2,
-                ),
-                1,
-            )[0]
-            dist2 = torch.min(
-                torch.norm(
-                    pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                    - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
-                    dim=2,
-                ),
-                1,
-            )[0]
-        except torch.cuda.OutOfMemoryError:
-            pc1 = output_pc.squeeze().cpu()
-            pc2 = gt_pc.squeeze().cpu()
-            dist1 = torch.min(
-                torch.norm(
-                    pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                    - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
-                    dim=2,
-                ),
-                1,
-            )[0]
-            dist2 = torch.min(
-                torch.norm(
-                    pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                    - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
-                    dim=2,
-                ),
-                1,
-            )[0]
+    def forward(self, output_pc, gt_pc, device="cpu"):
+        pc1 = output_pc.squeeze().to(device)
+        pc2 = gt_pc.squeeze()
+        dist1 = torch.min(
+            torch.norm(
+                pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+                dim=2,
+            ),
+            1,
+        )[0]
+        dist2 = torch.min(
+            torch.norm(
+                pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+                dim=2,
+            ),
+            1,
+        )[0]
 
         return (torch.mean(dist1) + torch.mean(dist2)).cpu()
 
