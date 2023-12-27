@@ -275,41 +275,17 @@ class QueryPoints(nn.Module):
             nn.Sequential(
                 nn.Linear(3, 8),
                 nn.ReLU(),
-                nn.Linear(8, 8),
-                nn.ReLU(),
-                nn.Linear(8, 8),
-            )
-            .double()
-            .to(device)
-        )
-
-        self.attn_1 = CrossAttention(device=self.device, hidden_size=8, mult=1)
-
-        self.feat_expansion_1 = (
-            nn.Sequential(
                 nn.Linear(8, 16),
                 nn.ReLU(),
-                nn.Linear(16, 16),
-            )
-            .double()
-            .to(device)
-        )
-
-        self.attn_2 = CrossAttention(device=self.device, hidden_size=16, mult=1)
-
-        self.feat_expansion_2 = (
-            nn.Sequential(
                 nn.Linear(16, 32),
-                nn.ReLU(),
-                nn.Linear(32, 32),
             )
             .double()
             .to(device)
         )
 
-        self.attn_3 = CrossAttention(device=self.device, hidden_size=32, mult=1)
+        self.attn_1 = CrossAttention(device=self.device, hidden_size=322, mult=1)
 
-        self.feat_expansion_3 = (
+        self.feat_expansion_1 = (
             nn.Sequential(
                 nn.Linear(32, 64),
                 nn.ReLU(),
@@ -319,11 +295,37 @@ class QueryPoints(nn.Module):
             .to(device)
         )
 
+        self.attn_2 = CrossAttention(device=self.device, hidden_size=64, mult=1)
+
+        self.feat_expansion_2 = (
+            nn.Sequential(
+                nn.Linear(64, 128),
+                nn.ReLU(),
+                nn.Linear(128, 128),
+            )
+            .double()
+            .to(device)
+        )
+
+        self.attn_3 = CrossAttention(device=self.device, hidden_size=128, mult=1)
+
+        self.feat_expansion_3 = (
+            nn.Sequential(
+                nn.Linear(128, 256),
+                nn.ReLU(),
+                nn.Linear(256, 256),
+            )
+            .double()
+            .to(device)
+        )
+
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(4, 4),
+                nn.Linear(16, 8),
                 nn.ReLU(),
-                nn.Linear(4, 3),
+                nn.Linear(8, 8),
+                nn.ReLU(),
+                nn.Linear(8, 3),
             )
             .double()
             .to(device)
