@@ -791,7 +791,7 @@ class ChamferLoss(nn.Module):
             1,
         )[0]
 
-        chamfer_distance = (torch.mean(dist1) + torch.mean(dist2)).cpu()
+        chamfer_distance = torch.mean(dist1) + torch.mean(dist2)
 
         pc1 = pc1.detach().cpu()
         pc2 = pc2.detach().cpu()
