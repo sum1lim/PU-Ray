@@ -779,7 +779,6 @@ class ChamferLoss(nn.Module):
         while idx < output_pc.shape[0]:
             pc1 = output_pc[idx].cpu()
             pc2 = gt_pc[idx].cpu()
-            print(pc1.shape, pc2.shape)
             dist1 = torch.min(
                 torch.norm(
                     pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
@@ -788,7 +787,6 @@ class ChamferLoss(nn.Module):
                 ),
                 1,
             )[0]
-            print(dist1.shape)
             dist2 = torch.min(
                 torch.norm(
                     pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
