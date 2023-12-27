@@ -779,7 +779,7 @@ class ChamferLoss(nn.Module):
                 pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
                 - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
                 dim=2,
-            ),
+            ) ** 2,
             1,
         )[0]
         dist2 = torch.min(
@@ -787,7 +787,7 @@ class ChamferLoss(nn.Module):
                 pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
                 - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
                 dim=2,
-            ),
+            ) ** 2,
             1,
         )[0]
 
