@@ -773,7 +773,7 @@ class ChamferLoss(nn.Module):
 
     def forward(self, output_pc, gt_pc, device="cpu"):
         pc1 = output_pc.squeeze().to(device)
-        pc2 = gt_pc.squeeze()
+        pc2 = gt_pc.squeeze().to(device)
         dist1 = torch.min(
             torch.norm(
                 pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
