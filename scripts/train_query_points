@@ -82,10 +82,7 @@ def main(args):
             output_pc = model(input_pc)
 
             # Update
-            try:
-                loss = loss_function(output_pc, gt_pc, device)
-            except torch.cuda.OutOfMemoryError:
-                loss = loss_function(output_pc, gt_pc, "cpu")
+            loss = loss_function(output_pc, gt_pc, "cpu")
 
             batch_loss += loss.to(device)
             batch_count += 1
