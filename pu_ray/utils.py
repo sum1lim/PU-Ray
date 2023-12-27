@@ -791,6 +791,19 @@ class ChamferLoss(nn.Module):
             1,
         )[0]
 
+        pc1 = pc1.detach().cpu()
+        pc2 = pc2.detach().cpu()
+        dist1 = dist1.detach().cpu()
+        dist2 = dist2.detach().cpu()
+        del (
+            pc1,
+            pc2,
+            dist1,
+            dist2,
+        )
+        gc.collect()
+        torch.cuda.empty_cache()
+
         return (torch.mean(dist1) + torch.mean(dist2)).cpu()
 
 
