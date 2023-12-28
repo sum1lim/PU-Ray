@@ -899,7 +899,7 @@ class ChamferLoss(nn.Module):
         pc1 = output_pc.squeeze().to(device)
         pc2 = gt_pc.squeeze().to(device)
 
-        num_chunks = 1
+        num_chunks = 1024
         while True:
             try:
                 pc1_chunks = torch.chunk(pc1, num_chunks)
