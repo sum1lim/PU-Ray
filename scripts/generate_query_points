@@ -27,13 +27,13 @@ def main(args):
             input_df = input_df[
                 (input_df["x"] ** 2 + input_df["y"] ** 2 + input_df["z"] ** 2)
                 ** (1 / 2)
-                > 30000
+                > 50000
             ]
             input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
 
             gt_df = pd.read_csv(f"{args.gt}/{f}", names=["x", "y", "z"])
             gt_df = gt_df[
-                (gt_df["x"] ** 2 + gt_df["y"] ** 2 + gt_df["z"] ** 2) ** (1 / 2) > 30000
+                (gt_df["x"] ** 2 + gt_df["y"] ** 2 + gt_df["z"] ** 2) ** (1 / 2) > 50000
             ]
             gt_pc = torch.tensor(gt_df.sample(frac=1).values).to(device)
         except IsADirectoryError:
