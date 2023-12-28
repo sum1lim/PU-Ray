@@ -281,7 +281,19 @@ class QueryPoints(nn.Module):
             nn.Sequential(
                 nn.Linear(3, 8),
                 nn.ReLU(),
-                nn.Linear(8, 16),
+                nn.Linear(8, 8),
+                nn.ReLU(),
+                nn.Linear(8, 8),
+            )
+            .double()
+            .to(device)
+        )
+
+        self.attn_1 = CrossAttention(device=self.device, hidden_size=8, mult=1)
+
+        self.feat_1 = (
+            nn.Sequential(
+                nn.Linear(16, 16),
                 nn.ReLU(),
                 nn.Linear(16, 16),
             )
@@ -289,37 +301,25 @@ class QueryPoints(nn.Module):
             .to(device)
         )
 
-        self.attn_1 = CrossAttention(device=self.device, hidden_size=16, mult=4)
-
-        self.feat_1 = (
-            nn.Sequential(
-                nn.Linear(32, 32),
-                nn.ReLU(),
-                nn.Linear(32, 32),
-            )
-            .double()
-            .to(device)
-        )
-
-        self.attn_2 = CrossAttention(device=self.device, hidden_size=32, mult=4)
+        self.attn_2 = CrossAttention(device=self.device, hidden_size=16, mult=1)
 
         self.feat_2 = (
             nn.Sequential(
-                nn.Linear(64, 64),
+                nn.Linear(32, 32),
                 nn.ReLU(),
-                nn.Linear(64, 64),
+                nn.Linear(32, 32),
             )
             .double()
             .to(device)
         )
 
-        self.attn_3 = CrossAttention(device=self.device, hidden_size=64, mult=4)
+        self.attn_3 = CrossAttention(device=self.device, hidden_size=32, mult=1)
 
         self.feat_3 = (
             nn.Sequential(
-                nn.Linear(128, 128),
+                nn.Linear(64, 64),
                 nn.ReLU(),
-                nn.Linear(128, 128),
+                nn.Linear(64, 64),
             )
             .double()
             .to(device)
@@ -327,7 +327,7 @@ class QueryPoints(nn.Module):
 
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(128 // self.r, 8),
+                nn.Linear(64 // self.r, 8),
                 nn.ReLU(),
                 nn.Linear(8, 8),
                 nn.ReLU(),
