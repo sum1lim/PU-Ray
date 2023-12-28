@@ -17,8 +17,10 @@ class QueryPointsData(Dataset):
     def __init__(
         self,
         input_dir,
+        reference_dir,
         gt_dir,
         device,
+        r=4,
     ):
         self.device = device
 
@@ -26,23 +28,112 @@ class QueryPointsData(Dataset):
 
         self.input_li = []
         self.gt_li = []
-        for filename in tqdm(file_li):
-            input_df = pd.read_csv(f"{input_dir}/{filename}", names=["x", "y", "z"])
-            input_df = input_df[input_df["x"] > 50000]
-            input_df = input_df[input_df.abs()["y"] < 30000]
-            input_df = input_df[input_df.abs()["z"] < 30000]
-            input_df /= 120000
-            self.input_li.append(
-                torch.tensor(input_df.sample(frac=1).values).double().to("cpu")
-            )
+        for _, filename in tqdm(enumerate(file_li)):
+            try:
+                input_df = pd.read_csv(f"{input_dir}/{filename}", names=["x", "y", "z"])
+                input_df = input_df[
+                    (input_df["x"] ** 2 + input_df["y"] ** 2 + input_df["z"] ** 2)
+                    ** (1 / 2)
+                    > 50000
+                ]
+                input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
 
-            gt_df = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
-            gt_df = gt_df[gt_df["x"] > 50000]
-            gt_df = gt_df[gt_df.abs()["y"] < 30000]
-            gt_df = gt_df[gt_df.abs()["z"] < 30000]
-            gt_df /= 120000
+                gt_df = pd.read_csv(
+                    f"{reference_dir}/{filename}", names=["x", "y", "z"]
+                )
+                gt_df = gt_df[
+                    (gt_df["x"] ** 2 + gt_df["y"] ** 2 + gt_df["z"] ** 2) ** (1 / 2)
+                    > 50000
+                ]
+                gt_pc = torch.tensor(gt_df.sample(frac=1).values).to(device)
+            except IsADirectoryError:
+                continue
+            print(filename)
+
+            try:
+                os.mkdir(f"{gt_dir}")
+            except FileExistsError:
+                None
+
+            if os.path.isfile(f"{gt_dir}/{filename}"):
+                None
+            else:
+                num_chunks = 256
+                while True:
+                    try:
+                        input_chunks = torch.chunk(input_pc, num_chunks)
+
+                        input_chunks_li = []
+                        for chunk in input_chunks:
+                            input_chunks_li.append(
+                                KNN(
+                                    gt_pc,
+                                    chunk,
+                                    1,
+                                    include_nearest=True,
+                                    cossim=False,
+                                    device=device,
+                                )[0].squeeze(1)
+                            )
+                        break
+                    except torch.cuda.OutOfMemoryError:
+                        num_chunks *= 2
+
+                input_pc = torch.cat(input_chunks_li, 0)
+
+                gt_chunks = torch.chunk(gt_pc, num_chunks)
+                knn_std = []
+                knn_mean = []
+                for chunk in gt_chunks:
+                    knn_coords, _ = KNN(
+                        input_pc,
+                        chunk,
+                        16,
+                        include_nearest=True,
+                        cossim=True,
+                        device=device,
+                    )
+                    knn_std.append(torch.std(knn_coords, 1))
+                    knn_mean.append(torch.mean(knn_coords, 1))
+
+                knn_std = torch.cat(knn_std, 0)
+                knn_mean = torch.cat(knn_mean, 0)
+                valid_idx = (
+                    torch.sum(torch.abs(gt_pc - knn_mean) < knn_std * 1.5, 1) == 3
+                )
+
+                gt_pc = gt_pc[valid_idx]
+                knn_std = knn_std[valid_idx]
+
+                std_avg = torch.mean(knn_std, 0)
+                std_std = torch.std(knn_std, 0)
+                valid_idx = (
+                    torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
+                )
+
+                query_points = gt_pc[valid_idx]
+                query_points = pd.DataFrame(
+                    query_points.cpu().numpy(),
+                    columns=["x", "y", "z"],
+                )
+                query_points = farthest_point_sampling(query_points, len(input_pc) * r)[
+                    ["x", "y", "z"]
+                ]
+
+                np.savetxt(f"{gt_dir}/{filename}", query_points, delimiter=",")
+
+            scaling_factor = random.random() * 0.2 + 0.9
+            rotation_matrix = random_rotation().double().to(device)
+
+            input_pc /= 120000
+            self.input_li.append(input_pc.to(device) @ rotation_matrix * scaling_factor)
+
+            query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
+            query_points /= 120000
             self.gt_li.append(
-                torch.tensor(gt_df.sample(frac=1).values).double().to("cpu")
+                torch.tensor(query_points.sample(frac=1).values).double().to(device)
+                @ rotation_matrix
+                * scaling_factor
             )
 
     def __getitem__(self, idx):
@@ -167,7 +258,7 @@ class TrainData(Dataset):
 
             # Data augmentation with random rotation
             rotation_matrices = (
-                torch.cat([self.random_rotation() for _ in range(len(labels))], 0)
+                torch.cat([random_rotation() for _ in range(len(labels))], 0)
                 .double()
                 .to("cpu")
             )
@@ -222,40 +313,6 @@ class TrainData(Dataset):
 
     def __len__(self):
         return len(self.labels)
-
-    def random_rotation(self):
-        roll = torch.randn(1)
-        yaw = torch.randn(1)
-        pitch = torch.randn(1)
-
-        one = torch.ones(1)
-        zero = torch.zeros(1)
-
-        rotation_x = torch.stack(
-            [
-                torch.stack([one, zero, zero]),
-                torch.stack([zero, cos(roll), -sin(roll)]),
-                torch.stack([zero, sin(roll), cos(roll)]),
-            ]
-        ).reshape(3, 3)
-
-        rotation_y = torch.stack(
-            [
-                torch.stack([cos(pitch), zero, sin(pitch)]),
-                torch.stack([zero, one, zero]),
-                torch.stack([-sin(pitch), zero, cos(pitch)]),
-            ]
-        ).reshape(3, 3)
-
-        rotation_z = torch.stack(
-            [
-                torch.stack([cos(yaw), -sin(yaw), zero]),
-                torch.stack([sin(yaw), cos(yaw), zero]),
-                torch.stack([zero, zero, one]),
-            ]
-        ).reshape(3, 3)
-
-        return torch.mm(torch.mm(rotation_z, rotation_y), rotation_x).unsqueeze(0)
 
 
 class UpsampleData(Dataset):
@@ -476,6 +533,41 @@ class UpsampleData(Dataset):
         return query_pc
 
 
+def random_rotation():
+    roll = torch.randn(1)
+    yaw = torch.randn(1)
+    pitch = torch.randn(1)
+
+    one = torch.ones(1)
+    zero = torch.zeros(1)
+
+    rotation_x = torch.stack(
+        [
+            torch.stack([one, zero, zero]),
+            torch.stack([zero, cos(roll), -sin(roll)]),
+            torch.stack([zero, sin(roll), cos(roll)]),
+        ]
+    ).reshape(3, 3)
+
+    rotation_y = torch.stack(
+        [
+            torch.stack([cos(pitch), zero, sin(pitch)]),
+            torch.stack([zero, one, zero]),
+            torch.stack([-sin(pitch), zero, cos(pitch)]),
+        ]
+    ).reshape(3, 3)
+
+    rotation_z = torch.stack(
+        [
+            torch.stack([cos(yaw), -sin(yaw), zero]),
+            torch.stack([sin(yaw), cos(yaw), zero]),
+            torch.stack([zero, zero, one]),
+        ]
+    ).reshape(3, 3)
+
+    return torch.mm(torch.mm(rotation_z, rotation_y), rotation_x).unsqueeze(0)
+
+
 def read_test_file(filename):
     with open(filename, "r") as test_file:
         if "OFF" != test_file.readline().strip():
@@ -507,20 +599,52 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
         )
 
         # Cosine similarities
-        cossims = torch.sum(
-            reference_vectors.unsqueeze(0).repeat([xyz.shape[0], 1, 1])
-            * query_vector.unsqueeze(1).repeat([1, references.shape[0], 1]),
-            dim=-1,
-        )
+        num_chunks = 1
+        while True:
+            try:
+                chunks = torch.chunk(query_vector, num_chunks)
+
+                cossim_li = []
+                for chunk in chunks:
+                    cossim_li.append(
+                        torch.sum(
+                            reference_vectors.unsqueeze(0).repeat(
+                                [chunk.shape[0], 1, 1]
+                            )
+                            * chunk.unsqueeze(1).repeat(
+                                [1, reference_vectors.shape[0], 1]
+                            ),
+                            dim=-1,
+                        )
+                    )
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
+
+        cossims = torch.cat(cossim_li, 0)
         criteria = cossims
 
     else:
         # Distances between observation points and input points
-        dists = torch.norm(
-            references.unsqueeze(0).repeat([xyz.shape[0], 1, 1])
-            - xyz.unsqueeze(1).repeat([1, references.shape[0], 1]),
-            dim=2,
-        )
+        num_chunks = 1
+        while True:
+            try:
+                chunks = torch.chunk(xyz, num_chunks)
+
+                dist_li = []
+                for chunk in chunks:
+                    dist_li.append(
+                        torch.norm(
+                            references.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
+                            - chunk.unsqueeze(1).repeat([1, references.shape[0], 1]),
+                            dim=2,
+                        )
+                    )
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
+
+        dists = torch.cat(dist_li, 0)
         criteria = -dists
 
     # first == False if input and query point clouds are the same
@@ -774,22 +898,59 @@ class ChamferLoss(nn.Module):
     def forward(self, output_pc, gt_pc, device="cpu"):
         pc1 = output_pc.squeeze().to(device)
         pc2 = gt_pc.squeeze().to(device)
-        dist1 = torch.min(
-            torch.norm(
-                pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
-                dim=2,
-            ) ** 2,
-            1,
-        )[0]
-        dist2 = torch.min(
-            torch.norm(
-                pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
-                dim=2,
-            ) ** 2,
-            1,
-        )[0]
+
+        num_chunks = 1
+        while True:
+            try:
+                pc1_chunks = torch.chunk(pc1, num_chunks)
+
+                dist1_li = []
+                for chunk in pc1_chunks:
+                    dist1_li.append(
+                        torch.min(
+                            torch.norm(
+                                chunk.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                                - pc2.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                                dim=2,
+                            )
+                            ** 2,
+                            1,
+                        )[0]
+                    )
+                    chunk.detach().cpu()
+                    del chunk
+                    gc.collect()
+                    torch.cuda.empty_cache()
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
+        dist1 = torch.cat(dist1_li, 0)
+
+        while True:
+            try:
+                pc2_chunks = torch.chunk(pc2, num_chunks)
+
+                dist2_li = []
+                for chunk in pc2_chunks:
+                    dist2_li.append(
+                        torch.min(
+                            torch.norm(
+                                chunk.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                                - pc1.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                                dim=2,
+                            )
+                            ** 2,
+                            1,
+                        )[0]
+                    )
+                    chunk.detach().cpu()
+                    del chunk
+                    gc.collect()
+                    torch.cuda.empty_cache()
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
+        dist2 = torch.cat(dist2_li, 0)
 
         chamfer_distance = torch.mean(dist1) + torch.mean(dist2)
 

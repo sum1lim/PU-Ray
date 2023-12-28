@@ -221,7 +221,12 @@ class PUray(nn.Module):
                 rel_vectors,
                 rel_depths,
             ) = self.marching(knn_coords, op)
-            (march_step, op, implicit_point, cossim,) = self.marching_step(
+            (
+                march_step,
+                op,
+                implicit_point,
+                cossim,
+            ) = self.marching_step(
                 feats, rel_vectors, rel_depths, query, cumulative_depth, ca_li
             )
 
@@ -267,9 +272,10 @@ class PUray(nn.Module):
 
 
 class QueryPoints(nn.Module):
-    def __init__(self, *, device):
+    def __init__(self, *, device, r=4):
         super().__init__()
         self.device = device
+        self.r = r
 
         self.point_encoding = (
             nn.Sequential(
@@ -321,7 +327,7 @@ class QueryPoints(nn.Module):
 
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(16, 8),
+                nn.Linear(256 // self.r, 8),
                 nn.ReLU(),
                 nn.Linear(8, 8),
                 nn.ReLU(),
@@ -358,7 +364,7 @@ class QueryPoints(nn.Module):
         feats = self.feat_3(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
-        feats = feats.reshape(feats.shape[0] * 16, feats.shape[1] // 16)
+        feats = feats.reshape(feats.shape[0] * self.r, feats.shape[1] // self.r)
 
         output_pc = self.point_decoding(feats)
 

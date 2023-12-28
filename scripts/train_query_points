@@ -27,15 +27,17 @@ def main(args):
         log_target = open(f"./log/{args.log}.log", "w")
 
     # Load the model
-    model = nn.DataParallel(QueryPoints(device=device)).to(device)
+    model = nn.DataParallel(QueryPoints(device=device, r=args.r)).to(device)
     print(
         f"Number of parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}"
     )
 
     train_dataset = QueryPointsData(
         args.input,
+        args.reference,
         args.gt,
         device=device,
+        r=args.r,
     )
 
     # Train-validation split
@@ -82,7 +84,7 @@ def main(args):
             output_pc = model(input_pc)
 
             # Update
-            loss = loss_function(output_pc, gt_pc, "cpu")
+            loss = loss_function(output_pc, gt_pc, device=device)
 
             batch_loss += loss.to(device)
             batch_count += 1
@@ -128,7 +130,7 @@ def main(args):
             val_output_pc = model(val_input_pc)
 
             # Loss calcuation
-            loss = loss_function(val_output_pc, val_gt_pc)
+            loss = loss_function(val_output_pc, val_gt_pc, device=device)
             val_loss += loss.detach().cpu() * val_input_pc.shape[0]
 
             # Error calculation
@@ -167,6 +169,11 @@ if __name__ == "__main__":
         help="Input point cloud directory path",
     )
     parser.add_argument(
+        "--reference",
+        type=str,
+        help="Reference point cloud directory path",
+    )
+    parser.add_argument(
         "--gt",
         type=str,
         help="Ground truth directory path",
@@ -174,7 +181,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--r",
         type=int,
-        default=16,
+        default=4,
         help="Upsampling rate",
     )
     parser.add_argument(
