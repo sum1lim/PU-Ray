@@ -916,12 +916,12 @@ class ChamferLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, output_pc, gt_pc, device="cpu"):
+    def forward(self, output_pc, gt_pc, k=-1, device="cpu"):
         pc1 = output_pc.squeeze().to(device)
         pc2 = gt_pc.squeeze().to(device)
 
         perm1 = torch.randperm(pc1.size(0))
-        idx1 = perm1[:4096]
+        idx1 = perm1[:k]
         samples1 = pc1[idx1]
         dist1 = torch.min(
             torch.norm(
@@ -934,7 +934,7 @@ class ChamferLoss(nn.Module):
         )[0]
 
         perm2 = torch.randperm(pc2.size(0))
-        idx2 = perm2[:4096]
+        idx2 = perm2[:k]
         samples2 = pc2[idx2]
         dist2 = torch.min(
             torch.norm(

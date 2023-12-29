@@ -84,7 +84,7 @@ def main(args):
             output_pc = model(input_pc)
 
             # Update
-            loss = loss_function(output_pc, gt_pc, device="cpu")
+            loss = loss_function(output_pc, gt_pc, k=16384, device="cpu")
 
             batch_loss += loss.to(device)
             batch_count += 1
@@ -130,7 +130,7 @@ def main(args):
             val_output_pc = model(val_input_pc)
 
             # Loss calcuation
-            loss = loss_function(val_output_pc, val_gt_pc, device="cpu")
+            loss = loss_function(val_output_pc, val_gt_pc, k=16384, device="cpu")
             val_loss += loss.detach().cpu() * val_input_pc.shape[0]
 
             # Error calculation
