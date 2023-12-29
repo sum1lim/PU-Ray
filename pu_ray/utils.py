@@ -900,7 +900,7 @@ class ChamferLoss(nn.Module):
         pc2 = gt_pc.squeeze().to(device)
 
         perm1 = torch.randperm(pc1.size(0))
-        idx1 = perm1[:1024]
+        idx1 = perm1[:4096]
         samples1 = pc1[idx1]
         dist1 = torch.min(
             torch.norm(
@@ -913,7 +913,7 @@ class ChamferLoss(nn.Module):
         )[0]
 
         perm2 = torch.randperm(pc2.size(0))
-        idx2 = perm2[:1024]
+        idx2 = perm2[:4096]
         samples2 = pc2[idx2]
         dist2 = torch.min(
             torch.norm(
