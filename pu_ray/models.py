@@ -352,18 +352,9 @@ class QueryPoints(nn.Module):
         knn_mean = torch.mean(input_knn, 1)
         valid_idx = torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
 
-        input_pc = input_pc[valid_idx]
-        input_knn = input_knn[valid_idx]
-        knn_indices = knn_indices[valid_idx]
-        knn_std = knn_std[valid_idx]
-
         std_avg = torch.mean(knn_std, 0)
         std_std = torch.std(knn_std, 0)
-        valid_idx = torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
-
-        input_pc = input_pc[valid_idx]
-        input_knn = input_knn[valid_idx]
-        knn_indices = knn_indices[valid_idx]
+        valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
 
         rel_pos = input_knn - input_pc.unsqueeze(1)
 
@@ -379,8 +370,7 @@ class QueryPoints(nn.Module):
         knn_feats = feats[knn_indices]
 
         attn = self.attn_3(feats, knn_feats, rel_pos)
-        feats = self.feat_3(torch.cat([feats, attn], -1))
-        knn_feats = feats[knn_indices]
+        feats = self.feat_3(torch.cat([feats, attn], -1))[valid_idx]
 
         feats = feats.reshape(feats.shape[0] * self.r, feats.shape[1] // self.r)
 
