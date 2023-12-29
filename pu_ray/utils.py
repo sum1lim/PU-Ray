@@ -676,7 +676,7 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
             criteria, k + 1, largest=True, sorted=True, dim=1
         ).indices
         topk_indices = topk_indices[:, 1:]
-        knn = references[topk_indices[:, 1:]]
+        knn = references[topk_indices]
 
     return knn, topk_indices
 
