@@ -347,6 +347,22 @@ class QueryPoints(nn.Module):
             cossim=True,
             device=self.device,
         )
+
+        knn_std = torch.std(input_knn, 1)
+        knn_mean = torch.mean(input_knn, 1)
+        valid_idx = torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
+
+        input_pc = input_pc[valid_idx]
+        input_knn = input_knn[valid_idx]
+        knn_std = knn_std[valid_idx]
+
+        std_avg = torch.mean(knn_std, 0)
+        std_std = torch.std(knn_std, 0)
+        valid_idx = torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
+
+        input_pc = input_pc[valid_idx]
+        input_knn = input_knn[valid_idx]
+
         rel_pos = input_knn - input_pc.unsqueeze(1)
 
         knn_feats = self.point_encoding(input_knn)
