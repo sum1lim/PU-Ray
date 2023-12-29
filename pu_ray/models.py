@@ -370,7 +370,7 @@ class QueryPoints(nn.Module):
         knn_feats = feats[knn_indices]
 
         attn = self.attn_3(feats, knn_feats, rel_pos)
-        # feats = self.feat_3(torch.cat([feats, attn], -1))[valid_idx]
+        feats = self.feat_3(torch.cat([feats, attn], -1))
 
         feats = feats.reshape(feats.shape[0] * self.r, feats.shape[1] // self.r)
 
