@@ -354,6 +354,7 @@ class QueryPoints(nn.Module):
 
         input_pc = input_pc[valid_idx]
         input_knn = input_knn[valid_idx]
+        knn_indices = knn_indices[valid_idx]
         knn_std = knn_std[valid_idx]
 
         std_avg = torch.mean(knn_std, 0)
@@ -362,6 +363,7 @@ class QueryPoints(nn.Module):
 
         input_pc = input_pc[valid_idx]
         input_knn = input_knn[valid_idx]
+        knn_indices = knn_indices[valid_idx]
 
         rel_pos = input_knn - input_pc.unsqueeze(1)
 
