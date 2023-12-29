@@ -38,6 +38,45 @@ class QueryPointsData(Dataset):
                 ]
                 input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
 
+                num_chunks = 1
+                while True:
+                    try:
+                        input_chunks = torch.chunk(input_pc, num_chunks)
+
+                        input_knn_li = []
+                        for chunk in input_chunks:
+                            input_knn_li.append(
+                                KNN(
+                                    input_pc,
+                                    chunk,
+                                    16,
+                                    include_nearest=True,
+                                    cossim=True,
+                                    device=device,
+                                )[0]
+                            )
+                        break
+                    except torch.cuda.OutOfMemoryError:
+                        num_chunks *= 2
+
+                input_knn = torch.cat(input_knn_li, 0)
+
+                knn_std = torch.std(input_knn, 1)
+                knn_mean = torch.mean(input_knn, 1)
+                valid_idx = (
+                    torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
+                )
+
+                valid_input = input_pc[valid_idx]
+                knn_std = knn_std[valid_idx]
+
+                std_avg = torch.mean(knn_std, 0)
+                std_std = torch.std(knn_std, 0)
+                valid_idx = (
+                    torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
+                )
+                valid_input = valid_input[valid_idx]
+
                 gt_df = pd.read_csv(
                     f"{reference_dir}/{filename}", names=["x", "y", "z"]
                 )
@@ -59,27 +98,6 @@ class QueryPointsData(Dataset):
                 None
             else:
                 num_chunks = 256
-                while True:
-                    try:
-                        input_chunks = torch.chunk(input_pc, num_chunks)
-
-                        input_chunks_li = []
-                        for chunk in input_chunks:
-                            input_chunks_li.append(
-                                KNN(
-                                    gt_pc,
-                                    chunk,
-                                    1,
-                                    include_nearest=True,
-                                    cossim=False,
-                                    device=device,
-                                )[0].squeeze(1)
-                            )
-                        break
-                    except torch.cuda.OutOfMemoryError:
-                        num_chunks *= 2
-
-                input_pc = torch.cat(input_chunks_li, 0)
 
                 gt_chunks = torch.chunk(gt_pc, num_chunks)
                 knn_std = []
@@ -116,17 +134,19 @@ class QueryPointsData(Dataset):
                     query_points.cpu().numpy(),
                     columns=["x", "y", "z"],
                 )
-                query_points = farthest_point_sampling(query_points, len(input_pc) * r)[
-                    ["x", "y", "z"]
-                ]
+                query_points = farthest_point_sampling(
+                    query_points, len(valid_input) * r
+                )[["x", "y", "z"]]
 
                 np.savetxt(f"{gt_dir}/{filename}", query_points, delimiter=",")
 
             scaling_factor = random.random() * 0.2 + 0.9
             rotation_matrix = random_rotation().double().to(device)
 
-            input_pc /= 120000
-            self.input_li.append(input_pc.to(device) @ rotation_matrix * scaling_factor)
+            valid_input /= 120000
+            self.input_li.append(
+                valid_input.to(device) @ rotation_matrix * scaling_factor
+            )
 
             query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
             query_points /= 120000
