@@ -916,35 +916,59 @@ class ChamferLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, output_pc, gt_pc, k=-1, device="cpu"):
+    def forward(self, output_pc, gt_pc, device="cpu"):
         pc1 = output_pc.squeeze().to(device)
         pc2 = gt_pc.squeeze().to(device)
 
-        perm1 = torch.randperm(pc1.size(0))
-        idx1 = perm1[:k]
-        samples1 = pc1[idx1]
-        dist1 = torch.min(
-            torch.norm(
-                samples1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                - pc2.unsqueeze(1).repeat([1, samples1.shape[0], 1]),
-                dim=2,
-            )
-            ** 2,
-            1,
-        )[0]
+        num_chunks = len(pc1) // 2048
+        while True:
+            try:
+                pc1_chunks = torch.chunk(pc1, num_chunks)
+                dist1 = torch.empty(0)
+                for chunk in pc1_chunks:
+                    torch.cat(
+                        [
+                            dist1,
+                            torch.min(
+                                torch.norm(
+                                    chunk.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                                    - pc2.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                                    dim=2,
+                                )
+                                ** 2,
+                                1,
+                            )[0],
+                        ],
+                        0,
+                    )
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
 
-        perm2 = torch.randperm(pc2.size(0))
-        idx2 = perm2[:k]
-        samples2 = pc2[idx2]
-        dist2 = torch.min(
-            torch.norm(
-                samples2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                - pc1.unsqueeze(1).repeat([1, samples2.shape[0], 1]),
-                dim=2,
-            )
-            ** 2,
-            1,
-        )[0]
+        num_chunks = len(pc2) // 2048
+        while True:
+            try:
+                pc2_chunks = torch.chunk(pc2, num_chunks)
+                dist2 = torch.empty(0)
+                for chunk in pc2_chunks:
+                    torch.cat(
+                        [
+                            dist2,
+                            torch.min(
+                                torch.norm(
+                                    chunk.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                                    - pc1.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                                    dim=2,
+                                )
+                                ** 2,
+                                1,
+                            )[0],
+                        ],
+                        0,
+                    )
+                break
+            except torch.cuda.OutOfMemoryError:
+                num_chunks *= 2
 
         chamfer_distance = torch.mean(dist1) + torch.mean(dist2)
 
