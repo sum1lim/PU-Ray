@@ -305,21 +305,21 @@ class QueryPoints(nn.Module):
 
         self.feat_2 = (
             nn.Sequential(
-                nn.Linear(128, 128),
+                nn.Linear(96, 96),
                 nn.ReLU(),
-                nn.Linear(128, 128),
+                nn.Linear(96, 96),
             )
             .double()
             .to(device)
         )
 
-        self.attn_3 = CrossAttention(device=self.device, hidden_size=128, mult=4)
+        self.attn_3 = CrossAttention(device=self.device, hidden_size=96, mult=4)
 
         self.feat_3 = (
             nn.Sequential(
-                nn.Linear(256, 256),
+                nn.Linear(128, 128),
                 nn.ReLU(),
-                nn.Linear(256, 256),
+                nn.Linear(128, 128),
             )
             .double()
             .to(device)
@@ -327,9 +327,9 @@ class QueryPoints(nn.Module):
 
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(256 // self.r, 128 // self.r),
+                nn.Linear(128 // self.r, 64 // self.r),
                 nn.ReLU(),
-                nn.Linear(128 // self.r, 8),
+                nn.Linear(64 // self.r, 8),
                 nn.ReLU(),
                 nn.Linear(8, 3),
             )
@@ -353,7 +353,7 @@ class QueryPoints(nn.Module):
         knn_feats = self.point_encoding(input_knn)
         point_feats = knn_feats[:, 0, :]
 
-        attn = self.attn_1(feats, knn_feats, rel_pos)
+        attn = self.attn_1(point_feats, knn_feats, rel_pos)
         feats = self.feat_1(torch.cat([point_feats, attn], -1))
         knn_feats = feats[knn_indices]
 
