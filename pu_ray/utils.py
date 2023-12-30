@@ -922,11 +922,11 @@ class ChamferLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, output_pc, gt_pc, k=-1, device="cpu"):
+    def forward(self, output_pc, gt_pc, device="cpu"):
         pc1 = output_pc.squeeze().to(device)
         pc2 = gt_pc.squeeze().to(device)
 
-        num_chunks = len(pc1) // 2048
+        num_chunks = len(pc1) // 2048 + 1
         while True:
             try:
                 pc1_chunks = torch.chunk(pc1, num_chunks)
@@ -950,9 +950,11 @@ class ChamferLoss(nn.Module):
             except torch.cuda.OutOfMemoryError:
                 num_chunks *= 2
 
+        del pc1_chunks
+        gc.collect()
         dist1 = torch.cat(dist1_li, 0)
 
-        num_chunks = len(pc2) // 2048
+        num_chunks = len(pc2) // 1024
         while True:
             try:
                 pc2_chunks = torch.chunk(pc2, num_chunks)
@@ -976,6 +978,8 @@ class ChamferLoss(nn.Module):
             except torch.cuda.OutOfMemoryError:
                 num_chunks *= 2
 
+        del pc2_chunks
+        gc.collect()
         dist2 = torch.cat(dist2_li, 0)
 
         chamfer_distance = torch.mean(dist1) + torch.mean(dist2)

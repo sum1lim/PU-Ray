@@ -84,7 +84,7 @@ def main(args):
             output_pc = model(input_pc)
 
             # Update
-            loss = loss_function(output_pc, gt_pc, "cpu")
+            loss = loss_function(output_pc, gt_pc, device="cpu")
 
             batch_loss += loss.to(device)
             batch_count += 1
