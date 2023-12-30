@@ -954,7 +954,7 @@ class ChamferLoss(nn.Module):
         gc.collect()
         dist1 = torch.cat(dist1_li, 0)
 
-        num_chunks = len(pc2) // 1024
+        num_chunks = len(pc2) // 2048 + 1
         while True:
             try:
                 pc2_chunks = torch.chunk(pc2, num_chunks)
