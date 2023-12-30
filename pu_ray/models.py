@@ -351,18 +351,18 @@ class QueryPoints(nn.Module):
         rel_pos = input_knn - input_pc.unsqueeze(1)
 
         knn_feats = self.point_encoding(input_knn)
-        feats = knn_feats[:, 0, :]
+        point_feats = knn_feats[:, 0, :]
 
         attn = self.attn_1(feats, knn_feats, rel_pos)
-        feats = self.feat_1(torch.cat([feats, attn], -1))
+        feats = self.feat_1(torch.cat([point_feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_2(feats, knn_feats, rel_pos)
-        feats = self.feat_2(torch.cat([feats, attn], -1))
+        feats = self.feat_2(torch.cat([point_feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_3(feats, knn_feats, rel_pos)
-        feats = self.feat_3(torch.cat([feats, attn], -1))
+        feats = self.feat_3(torch.cat([point_feats, attn], -1))
 
         feats = feats.reshape(feats.shape[0] * self.r, feats.shape[1] // self.r)
 
