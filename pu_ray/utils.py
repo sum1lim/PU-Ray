@@ -924,7 +924,7 @@ class ChamferLoss(nn.Module):
         while True:
             try:
                 pc1_chunks = torch.chunk(pc1, num_chunks)
-                dist1 = torch.empty(0)
+                dist1 = torch.empty(0).to(device)
                 for chunk in pc1_chunks:
                     torch.cat(
                         [
@@ -949,7 +949,7 @@ class ChamferLoss(nn.Module):
         while True:
             try:
                 pc2_chunks = torch.chunk(pc2, num_chunks)
-                dist2 = torch.empty(0)
+                dist2 = torch.empty(0).to(device)
                 for chunk in pc2_chunks:
                     torch.cat(
                         [
