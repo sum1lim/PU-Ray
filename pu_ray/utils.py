@@ -41,44 +41,44 @@ class QueryPointsData(Dataset):
                 ]
                 input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
 
-                num_chunks = 1
-                while True:
-                    try:
-                        input_chunks = torch.chunk(input_pc, num_chunks)
+                # num_chunks = 1
+                # while True:
+                #     try:
+                #         input_chunks = torch.chunk(input_pc, num_chunks)
 
-                        input_knn_li = []
-                        for chunk in input_chunks:
-                            input_knn_li.append(
-                                KNN(
-                                    input_pc,
-                                    chunk,
-                                    16,
-                                    include_nearest=True,
-                                    cossim=True,
-                                    device=device,
-                                )[0]
-                            )
-                        break
-                    except torch.cuda.OutOfMemoryError:
-                        num_chunks *= 2
+                #         input_knn_li = []
+                #         for chunk in input_chunks:
+                #             input_knn_li.append(
+                #                 KNN(
+                #                     input_pc,
+                #                     chunk,
+                #                     16,
+                #                     include_nearest=True,
+                #                     cossim=True,
+                #                     device=device,
+                #                 )[0]
+                #             )
+                #         break
+                #     except torch.cuda.OutOfMemoryError:
+                #         num_chunks *= 2
 
-                input_knn = torch.cat(input_knn_li, 0)
+                # input_knn = torch.cat(input_knn_li, 0)
 
-                knn_std = torch.std(input_knn, 1)
-                knn_mean = torch.mean(input_knn, 1)
-                valid_idx = (
-                    torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
-                )
+                # knn_std = torch.std(input_knn, 1)
+                # knn_mean = torch.mean(input_knn, 1)
+                # valid_idx = (
+                #     torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
+                # )
 
-                valid_input = input_pc[valid_idx]
-                knn_std = knn_std[valid_idx]
+                # valid_input = input_pc[valid_idx]
+                # knn_std = knn_std[valid_idx]
 
-                std_avg = torch.mean(knn_std, 0)
-                std_std = torch.std(knn_std, 0)
-                valid_idx = (
-                    torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
-                )
-                valid_input = valid_input[valid_idx]
+                # std_avg = torch.mean(knn_std, 0)
+                # std_std = torch.std(knn_std, 0)
+                # valid_idx = (
+                #     torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
+                # )
+                # valid_input = valid_input[valid_idx]
 
                 gt_df = pd.read_csv(
                     f"{reference_dir}/{filename}", names=["x", "y", "z"]
@@ -141,7 +141,9 @@ class QueryPointsData(Dataset):
                     columns=["x", "y", "z"],
                 )
                 query_points = farthest_point_sampling(
-                    query_points, len(valid_input) * r
+                    # query_points, len(valid_input) * r
+                    query_points,
+                    len(input_pc) * r,
                 )[["x", "y", "z"]]
 
                 np.savetxt(f"{gt_dir}/{filename}", query_points, delimiter=",")
@@ -149,9 +151,13 @@ class QueryPointsData(Dataset):
             scaling_factor = random.random() * 0.2 + 0.9
             rotation_matrix = random_rotation().double().to(device)
 
-            valid_input /= 120000
+            # valid_input /= 120000
+            input_pc /= 120000
             self.input_li.append(
-                valid_input.to(device) @ rotation_matrix * scaling_factor
+                # valid_input.to(device) @ rotation_matrix * scaling_factor
+                input_pc.to(device)
+                @ rotation_matrix
+                * scaling_factor
             )
 
             query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
@@ -926,61 +932,25 @@ class ChamferLoss(nn.Module):
         pc1 = output_pc.squeeze().to(device)
         pc2 = gt_pc.squeeze().to(device)
 
-        num_chunks = len(pc1) // 2048 + 1
-        while True:
-            try:
-                pc1_chunks = torch.chunk(pc1, num_chunks)
+        dist1 = torch.min(
+            torch.norm(
+                pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+                dim=2,
+            )
+            ** 2,
+            1,
+        )[0]
 
-                dist1_li = []
-                for chunk in pc1_chunks:
-                    dist1_li.append(
-                        torch.min(
-                            torch.norm(
-                                chunk.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                                - pc2.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
-                                dim=2,
-                            )
-                            ** 2,
-                            1,
-                        )[0]
-                    )
-                    del chunk
-                    gc.collect()
-                break
-            except torch.cuda.OutOfMemoryError:
-                num_chunks *= 2
-
-        del pc1_chunks
-        gc.collect()
-        dist1 = torch.cat(dist1_li, 0)
-
-        num_chunks = len(pc2) // 2048 + 1
-        while True:
-            try:
-                pc2_chunks = torch.chunk(pc2, num_chunks)
-
-                dist2_li = []
-                for chunk in pc2_chunks:
-                    dist2_li.append(
-                        torch.min(
-                            torch.norm(
-                                chunk.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                                - pc1.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
-                                dim=2,
-                            )
-                            ** 2,
-                            1,
-                        )[0]
-                    )
-                    del chunk
-                    gc.collect()
-                break
-            except torch.cuda.OutOfMemoryError:
-                num_chunks *= 2
-
-        del pc2_chunks
-        gc.collect()
-        dist2 = torch.cat(dist2_li, 0)
+        dist2 = torch.min(
+            torch.norm(
+                pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+                dim=2,
+            )
+            ** 2,
+            1,
+        )[0]
 
         chamfer_distance = torch.mean(dist1) + torch.mean(dist2)
 
