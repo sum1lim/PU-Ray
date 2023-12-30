@@ -305,21 +305,21 @@ class QueryPoints(nn.Module):
 
         self.feat_2 = (
             nn.Sequential(
-                nn.Linear(96, 96),
+                nn.Linear(128, 128),
                 nn.ReLU(),
-                nn.Linear(96, 96),
+                nn.Linear(128, 128),
             )
             .double()
             .to(device)
         )
 
-        self.attn_3 = CrossAttention(device=self.device, hidden_size=96, mult=4)
+        self.attn_3 = CrossAttention(device=self.device, hidden_size=128, mult=4)
 
         self.feat_3 = (
             nn.Sequential(
-                nn.Linear(128, 128),
+                nn.Linear(256, 256),
                 nn.ReLU(),
-                nn.Linear(128, 128),
+                nn.Linear(256, 256),
             )
             .double()
             .to(device)
@@ -327,9 +327,9 @@ class QueryPoints(nn.Module):
 
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(128 // self.r, 64 // self.r),
+                nn.Linear(256 // self.r + 32, 8),
                 nn.ReLU(),
-                nn.Linear(64 // self.r, 8),
+                nn.Linear(8, 8),
                 nn.ReLU(),
                 nn.Linear(8, 3),
             )
@@ -358,14 +358,15 @@ class QueryPoints(nn.Module):
         knn_feats = feats[knn_indices]
 
         attn = self.attn_2(feats, knn_feats, rel_pos)
-        feats = self.feat_2(torch.cat([point_feats, attn], -1))
+        feats = self.feat_2(torch.cat([feats, attn], -1))
         knn_feats = feats[knn_indices]
 
         attn = self.attn_3(feats, knn_feats, rel_pos)
-        feats = self.feat_3(torch.cat([point_feats, attn], -1))
+        feats = self.feat_3(torch.cat([feats, attn], -1))
 
-        feats = feats.reshape(feats.shape[0] * self.r, feats.shape[1] // self.r)
+        feats = feats.reshape(feats.shape[0], self.r, feats.shape[1] // self.r)
+        feats = torch.cat([feats, point_feats.unsqueeze(1).repeat(1, self.r, 1)], -1)
 
-        output_pc = self.point_decoding(feats)
+        output_pc = self.point_decoding(feats).flatten(0, 1)
 
         return output_pc
