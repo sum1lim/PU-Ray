@@ -41,30 +41,30 @@ class QueryPointsData(Dataset):
                 ]
                 input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
 
-                # num_chunks = 1
-                # while True:
-                #     try:
-                #         input_chunks = torch.chunk(input_pc, num_chunks)
+                num_chunks = 1
+                while True:
+                    try:
+                        input_chunks = torch.chunk(input_pc, num_chunks)
 
-                #         input_knn_li = []
-                #         for chunk in input_chunks:
-                #             input_knn_li.append(
-                #                 KNN(
-                #                     input_pc,
-                #                     chunk,
-                #                     16,
-                #                     include_nearest=True,
-                #                     cossim=True,
-                #                     device=device,
-                #                 )[0]
-                #             )
-                #         break
-                #     except torch.cuda.OutOfMemoryError:
-                #         num_chunks *= 2
+                        input_knn_li = []
+                        for chunk in input_chunks:
+                            input_knn_li.append(
+                                KNN(
+                                    input_pc,
+                                    chunk,
+                                    16,
+                                    include_nearest=True,
+                                    cossim=True,
+                                    device=device,
+                                )[0]
+                            )
+                        break
+                    except torch.cuda.OutOfMemoryError:
+                        num_chunks *= 2
 
-                # input_knn = torch.cat(input_knn_li, 0)
+                input_knn = torch.cat(input_knn_li, 0)
 
-                # knn_std = torch.std(input_knn, 1)
+                knn_std = torch.std(input_knn, 1)
                 # knn_mean = torch.mean(input_knn, 1)
                 # valid_idx = (
                 #     torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
@@ -73,12 +73,12 @@ class QueryPointsData(Dataset):
                 # valid_input = input_pc[valid_idx]
                 # knn_std = knn_std[valid_idx]
 
-                # std_avg = torch.mean(knn_std, 0)
-                # std_std = torch.std(knn_std, 0)
-                # valid_idx = (
-                #     torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
-                # )
-                # valid_input = valid_input[valid_idx]
+                std_avg = torch.mean(knn_std, 0)
+                std_std = torch.std(knn_std, 0)
+                valid_idx = (
+                    torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
+                )
+                valid_input = valid_input[valid_idx]
 
                 gt_df = pd.read_csv(
                     f"{reference_dir}/{filename}", names=["x", "y", "z"]
@@ -141,9 +141,10 @@ class QueryPointsData(Dataset):
                     columns=["x", "y", "z"],
                 )
                 query_points = farthest_point_sampling(
-                    # query_points, len(valid_input) * r
                     query_points,
-                    len(input_pc) * r,
+                    len(valid_input) * r
+                    # query_points,
+                    # len(input_pc) * r,
                 )[["x", "y", "z"]]
 
                 np.savetxt(f"{gt_dir}/{filename}", query_points, delimiter=",")
@@ -151,13 +152,15 @@ class QueryPointsData(Dataset):
             scaling_factor = random.random() * 0.2 + 0.9
             rotation_matrix = random_rotation().double().to(device)
 
-            # valid_input /= 1000
-            input_pc /= 1000
+            valid_input /= 1000
+            # input_pc /= 1000
             self.input_li.append(
-                # valid_input.to(device) @ rotation_matrix * scaling_factor
-                input_pc.to(device)
+                valid_input.to(device)
                 @ rotation_matrix
                 * scaling_factor
+                # input_pc.to(device)
+                # @ rotation_matrix
+                # * scaling_factor
             )
 
             query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
