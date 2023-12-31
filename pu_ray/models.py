@@ -327,9 +327,9 @@ class QueryPoints(nn.Module):
 
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(256 // self.r + 32, 8),
+                nn.Linear(256 // self.r, 128 // self.r),
                 nn.ReLU(),
-                nn.Linear(8, 8),
+                nn.Linear(128 // self.r, 8),
                 nn.ReLU(),
                 nn.Linear(8, 3),
             )
@@ -352,7 +352,6 @@ class QueryPoints(nn.Module):
 
         knn_feats = self.point_encoding(input_knn)
         feats = knn_feats[:, 0, :]
-        point_feats = feats.unsqueeze(1).repeat(1, self.r, 1)
 
         attn = self.attn_1(feats, knn_feats, rel_pos)
         feats = self.feat_1(torch.cat([feats, attn], -1))
@@ -366,8 +365,9 @@ class QueryPoints(nn.Module):
         feats = self.feat_3(torch.cat([feats, attn], -1))
 
         feats = feats.reshape(feats.shape[0], self.r, feats.shape[1] // self.r)
-        feats = torch.cat([feats, point_feats], -1)
 
-        output_pc = self.point_decoding(feats).flatten(0, 1)
+        output_pc = (
+            self.point_decoding(feats) + input_pc.unsqueeze(1).repeat(1, self.r, 1)
+        ).flatten(0, 1)
 
         return output_pc
