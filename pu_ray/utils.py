@@ -151,8 +151,8 @@ class QueryPointsData(Dataset):
             scaling_factor = random.random() * 0.2 + 0.9
             rotation_matrix = random_rotation().double().to(device)
 
-            # valid_input /= 120
-            input_pc /= 120
+            # valid_input /= 1000
+            input_pc /= 1000
             self.input_li.append(
                 # valid_input.to(device) @ rotation_matrix * scaling_factor
                 input_pc.to(device)
@@ -161,7 +161,7 @@ class QueryPointsData(Dataset):
             )
 
             query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
-            query_points /= 120
+            query_points /= 1000
             self.gt_li.append(
                 torch.tensor(query_points.sample(frac=1).values).double().to(device)
                 @ rotation_matrix
