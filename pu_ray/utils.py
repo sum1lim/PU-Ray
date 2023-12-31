@@ -74,12 +74,12 @@ class QueryPointsData(Dataset):
                 # valid_input = input_pc[valid_idx]
                 # knn_std = knn_std[valid_idx]
 
-                std_avg = torch.mean(knn_std, 0)
-                std_std = torch.std(knn_std, 0)
-                valid_idx = (
-                    torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
-                )
-                valid_input = valid_input[valid_idx]
+                # std_avg = torch.mean(knn_std, 0)
+                # std_std = torch.std(knn_std, 0)
+                # valid_idx = (
+                #     torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
+                # )
+                # valid_input = valid_input[valid_idx]
 
                 gt_df = pd.read_csv(
                     f"{reference_dir}/{filename}", names=["x", "y", "z"]
