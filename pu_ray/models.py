@@ -327,7 +327,7 @@ class QueryPoints(nn.Module):
 
         self.point_decoding = (
             nn.Sequential(
-                nn.Linear(256 // self.r, 128 // self.r),
+                nn.Linear((256 + 128 + 64 + 32) // self.r, 128 // self.r),
                 nn.ReLU(),
                 nn.Linear(128 // self.r, 8),
                 nn.ReLU(),
@@ -354,16 +354,17 @@ class QueryPoints(nn.Module):
         feats = knn_feats[:, 0, :]
 
         attn = self.attn_1(feats, knn_feats, rel_pos)
-        feats = self.feat_1(torch.cat([feats, attn], -1))
-        knn_feats = feats[knn_indices]
+        feats1 = self.feat_1(torch.cat([feats, attn], -1))
+        knn_feats = feats1[knn_indices]
 
-        attn = self.attn_2(feats, knn_feats, rel_pos)
-        feats = self.feat_2(torch.cat([feats, attn], -1))
-        knn_feats = feats[knn_indices]
+        attn = self.attn_2(feats1, knn_feats, rel_pos)
+        feats2 = self.feat_2(torch.cat([feats1, attn], -1))
+        knn_feats = feats2[knn_indices]
 
-        attn = self.attn_3(feats, knn_feats, rel_pos)
-        feats = self.feat_3(torch.cat([feats, attn], -1))
+        attn = self.attn_3(feats2, knn_feats, rel_pos)
+        feats3 = self.feat_3(torch.cat([feats2, attn], -1))
 
+        feats = torch.cat([feats, feats1, feats2, feats3], -1)
         feats = feats.reshape(feats.shape[0], self.r, feats.shape[1] // self.r)
 
         output_pc = (
