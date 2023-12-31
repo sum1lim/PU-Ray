@@ -142,10 +142,7 @@ class QueryPointsData(Dataset):
                     columns=["x", "y", "z"],
                 )
                 query_points = farthest_point_sampling(
-                    query_points,
-                    len(valid_input) * r
-                    # query_points,
-                    # len(input_pc) * r,
+                    query_points, len(valid_input) * r
                 )[["x", "y", "z"]]
 
                 np.savetxt(f"{gt_dir}/{filename}", query_points, delimiter=",")
@@ -154,14 +151,8 @@ class QueryPointsData(Dataset):
             rotation_matrix = random_rotation().double().to(device)
 
             valid_input /= 1000
-            # input_pc /= 1000
             self.input_li.append(
-                valid_input.to(device)
-                @ rotation_matrix
-                * scaling_factor
-                # input_pc.to(device)
-                # @ rotation_matrix
-                # * scaling_factor
+                valid_input.to(device) @ rotation_matrix * scaling_factor
             )
 
             query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
