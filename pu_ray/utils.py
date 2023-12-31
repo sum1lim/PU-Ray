@@ -63,6 +63,7 @@ class QueryPointsData(Dataset):
                         num_chunks *= 2
 
                 input_knn = torch.cat(input_knn_li, 0)
+                valid_input = input_pc
 
                 knn_std = torch.std(input_knn, 1)
                 # knn_mean = torch.mean(input_knn, 1)
