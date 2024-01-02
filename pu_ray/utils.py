@@ -658,25 +658,17 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
             try:
                 chunks = torch.chunk(query_vector, num_chunks)
 
-                cossim_li = []
+                criteria_li = []
                 for chunk in chunks:
-                    cossim_li.append(
-                        torch.sum(
-                            reference_vectors.unsqueeze(0).repeat(
-                                [chunk.shape[0], 1, 1]
-                            )
-                            * chunk.unsqueeze(1).repeat(
-                                [1, reference_vectors.shape[0], 1]
-                            ),
-                            dim=-1,
-                        )
+                    cossim = torch.sum(
+                        reference_vectors.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
+                        * chunk.unsqueeze(1).repeat([1, reference_vectors.shape[0], 1]),
+                        dim=-1,
                     )
+                    criteria_li.append(cossim)
                 break
             except torch.cuda.OutOfMemoryError:
                 num_chunks *= 2
-
-        cossims = torch.cat(cossim_li, 0)
-        criteria = cossims
 
     else:
         # Distances between observation points and input points
@@ -685,38 +677,42 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
             try:
                 chunks = torch.chunk(xyz, num_chunks)
 
-                dist_li = []
+                criteria_li = []
                 for chunk in chunks:
-                    dist_li.append(
-                        torch.norm(
-                            references.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
-                            - chunk.unsqueeze(1).repeat([1, references.shape[0], 1]),
-                            dim=2,
-                        )
+                    dist = torch.norm(
+                        references.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
+                        - chunk.unsqueeze(1).repeat([1, references.shape[0], 1]),
+                        dim=2,
                     )
+                    criteria_li.append(-dist)
                 break
             except torch.cuda.OutOfMemoryError:
                 num_chunks *= 2
 
-        dists = torch.cat(dist_li, 0)
-        criteria = -dists
-
     # first == False if input and query point clouds are the same
-    if include_nearest == True:
-        if criteria.shape[-1] < k:
-            k = criteria.shape[-1]
-        topk_indices = torch.topk(criteria, k, largest=True, sorted=True, dim=1).indices
-        knn = references[topk_indices]
-    else:
-        if criteria.shape[-1] < k + 1:
-            k = criteria.shape[-1] - 1
-        topk_indices = torch.topk(
-            criteria, k + 1, largest=True, sorted=True, dim=1
-        ).indices
-        topk_indices = topk_indices[:, 1:]
-        knn = references[topk_indices]
+    topk_idx_li = []
+    knn_li = []
+    for criteria in criteria_li:
+        if include_nearest == True:
+            if criteria.shape[-1] < k:
+                k = criteria.shape[-1]
+            topk_indices = torch.topk(
+                criteria, k, largest=True, sorted=True, dim=1
+            ).indices
+            knn = references[topk_indices]
+        else:
+            if criteria.shape[-1] < k + 1:
+                k = criteria.shape[-1] - 1
+            topk_indices = torch.topk(
+                criteria, k + 1, largest=True, sorted=True, dim=1
+            ).indices
+            topk_indices = topk_indices[:, 1:]
+            knn = references[topk_indices]
 
-    return knn, topk_indices
+        topk_idx_li.append(topk_indices)
+        knn_li.append(knn)
+
+    return torch.cat(knn_li, 0), torch.cat(topk_idx_li, 0)
 
 
 def farthest_point_sampling(pc, num_sample, device="cuda"):
