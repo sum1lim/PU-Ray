@@ -364,7 +364,7 @@ class UpsampleData(Dataset):
         self.device = device
         self.patch_k = patch_k
 
-        input_pc = input_pc.to("cpu")
+        input_pc = input_pc.to(self.device)
         input_df = pd.DataFrame(input_pc.cpu().numpy(), columns=["x", "y", "z"])
 
         if num_op == None:
@@ -374,12 +374,12 @@ class UpsampleData(Dataset):
             input_df,
             input_df,
             query_k,
-            "cpu",
+            self.device,
             output_size,
             real_scanned=real_scanned,
         )
 
-        query_pc = query_pc.double().to("cpu")
+        query_pc = query_pc.double().to(self.device)
 
         # if real_scanned:
         #     op = torch.tensor([[0, 0, 0]])
@@ -388,14 +388,14 @@ class UpsampleData(Dataset):
             generate_op(
                 farthest_point_sampling(input_df, num_op),
                 input_df,
-                "cpu",
+                self.device,
                 k=16,
                 calculate_mean=False,
                 perturb=False,
                 real_scanned=real_scanned,
             )
             .double()
-            .to("cpu")
+            .to(self.device)
         )
 
         knn_coords, _ = KNN(
@@ -404,9 +404,10 @@ class UpsampleData(Dataset):
             self.patch_k,
             include_nearest=True,
             cossim=False,
+            device=self.device,
         )
 
-        op_xyz, _ = KNN(op, query_pc, 1, include_nearest=True)
+        op_xyz, _ = KNN(op, query_pc, 1, include_nearest=True, device=self.device)
         op_xyz = op_xyz.squeeze()
 
         # relative positioning
