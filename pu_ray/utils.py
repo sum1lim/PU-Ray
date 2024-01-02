@@ -467,7 +467,7 @@ class UpsampleData(Dataset):
                             KNN(
                                 target,
                                 chunk,
-                                8,
+                                6,
                                 include_nearest=True,
                                 cossim=False,
                                 device=device,
@@ -497,7 +497,7 @@ class UpsampleData(Dataset):
                             KNN(
                                 target,
                                 chunk,
-                                8,
+                                6,
                                 include_nearest=True,
                                 cossim=True,
                                 device=device,
@@ -752,7 +752,7 @@ def farthest_point_sampling(pc, num_sample, device="cuda"):
 
 
 def noise_removal(points, input_pc):
-    knn = KNN(input_pc, points, 8, include_nearest=True, cossim=True)[0]
+    knn = KNN(input_pc, points, 6, include_nearest=True, cossim=True)[0]
 
     knn_avg = torch.mean(knn, 1)
     knn_std = torch.std(knn, 1)
