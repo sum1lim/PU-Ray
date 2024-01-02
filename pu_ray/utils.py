@@ -467,7 +467,7 @@ class UpsampleData(Dataset):
                             KNN(
                                 target,
                                 chunk,
-                                16,
+                                8,
                                 include_nearest=True,
                                 cossim=False,
                                 device=device,
@@ -497,7 +497,7 @@ class UpsampleData(Dataset):
                             KNN(
                                 target,
                                 chunk,
-                                16,
+                                8,
                                 include_nearest=True,
                                 cossim=True,
                                 device=device,
