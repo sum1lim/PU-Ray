@@ -144,13 +144,12 @@ def main(args):
                 torch.cuda.empty_cache()
 
             garbage_collect(pc_data.__dict__.values())
-            print(len(updating_pc), len(input_df) * args.r)
 
         # output_pc = torch.cat(output_pc, dim=0)
         output_pc = updating_pc.detach().cpu().detach().numpy()
         output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
         if args.fps and len(output_pc) > len(input_df) * args.r:
-            query_pc = torch.tensor(
+            output_pc = torch.tensor(
                 farthest_point_sampling(output_pc, len(input_df) * args.r)[
                     ["x", "y", "z"]
                 ].values
