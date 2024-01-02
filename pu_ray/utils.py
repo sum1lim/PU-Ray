@@ -698,9 +698,13 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
 
     # first == False if input and query point clouds are the same
     if include_nearest == True:
+        if criteria.shape[-1] < k:
+            k = criteria.shape[-1]
         topk_indices = torch.topk(criteria, k, largest=True, sorted=True, dim=1).indices
         knn = references[topk_indices]
     else:
+        if criteria.shape[-1] < k + 1:
+            k = criteria.shape[-1] - 1
         topk_indices = torch.topk(
             criteria, k + 1, largest=True, sorted=True, dim=1
         ).indices
