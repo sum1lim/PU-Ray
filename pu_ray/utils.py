@@ -1,3 +1,7 @@
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import gc
 import os
 import random
@@ -522,7 +526,7 @@ class UpsampleData(Dataset):
                 0,
             )
 
-            mult = output_size // len(target)
+            mult = output_size // len(target) + 1
             while True:
                 queries = torch.cat(
                     [
@@ -714,7 +718,7 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
     return knn, topk_indices
 
 
-def farthest_point_sampling(pc, num_sample):
+def farthest_point_sampling(pc, num_sample, device="cuda"):
     # Farthest point sampling using implementation by
     #  @article{open3d,
     #    author  = {Qian-Yi Zhou and Jaesik Park and Vladlen Koltun},
@@ -732,17 +736,20 @@ def farthest_point_sampling(pc, num_sample):
         ).T
     )
     np.random.shuffle(vertices)
-    # pcd = o3d.t.geometry.PointCloud(
-    #     o3c.Tensor(vertices, o3c.float64, o3c.Device("cuda:0"))
-    # )
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(vertices)
+    pcd = o3d.t.geometry.PointCloud(
+        o3c.Tensor(vertices, o3c.float64, o3c.Device(f"{device}:0"))
+    )
+    # pcd = o3d.geometry.PointCloud()
+    # pcd.points = o3d.utility.Vector3dVector(vertices)
 
     try:
         downsampled = pcd.farthest_point_down_sample(num_sample)
     except RuntimeError:
         downsampled = pcd
-    downsampled = pd.DataFrame(np.asarray(downsampled.points), columns=["x", "y", "z"])
+    # downsampled = pd.DataFrame(np.asarray(downsampled.points), columns=["x", "y", "z"])
+    downsampled = pd.DataFrame(
+        downsampled.point.positions.cpu().numpy(), columns=["x", "y", "z"]
+    )
 
     return downsampled
 
@@ -752,7 +759,7 @@ def noise_removal(points, input_pc):
 
     knn_avg = torch.mean(knn, 1)
     knn_std = torch.std(knn, 1)
-    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std, 1) == 3
+    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 3, 1) == 3
 
     std_avg = torch.mean(knn_std, 0)
     std_std = torch.std(knn_std, 0)

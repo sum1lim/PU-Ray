@@ -149,11 +149,10 @@ def main(args):
         output_pc = updating_pc.detach().cpu().detach().numpy()
         output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
         if args.fps and len(output_pc) > len(input_df) * args.r:
-            output_pc = torch.tensor(
-                farthest_point_sampling(output_pc, len(input_df) * args.r)[
-                    ["x", "y", "z"]
-                ].values
-            )
+            output_pc = farthest_point_sampling(output_pc, len(input_df) * args.r)[
+                ["x", "y", "z"]
+            ]
+
         output_pc_li.append(output_pc)
 
         print(f"Inference time: {inference_time} sec")
