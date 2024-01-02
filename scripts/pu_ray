@@ -37,116 +37,130 @@ def main(args):
         input_df = pd.read_csv(args.input, sep=" ", names=["x", "y", "z"])
     elif args.input.endswith(".csv"):
         input_df = pd.read_csv(args.input, sep=",", names=["x", "y", "z"])
-    input_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
-    updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
-    # Chamfer distance calculation
 
-    gt_file = args.input.split("/")[-1]
-    if args.gt_queries:
-        gt_df = pd.read_csv(f"{args.gt_dir}/{gt_file}", sep=" ", names=["x", "y", "z"])
-        query_pc = torch.tensor(gt_df[["x", "y", "z"]].values).double()
+    if args.real_scanned:
+        dists = (input_df["x"] ** 2 + input_df["y"] ** 2 + input_df["z"] ** 2) ** (
+            1 / 2
+        )
+        tan = input_df["y"] / input_df["x"]
+        input_li = [
+            input_df[(dists > 30000) & (tan.abs() < 1) & (input_df["x"] > 1)],
+            input_df[(dists > 30000) & (tan.abs() < 1) & (input_df["x"] < 1)],
+            input_df[(dists > 30000) & (tan.abs() > 1) & (input_df["y"] > 1)],
+            input_df[(dists > 30000) & (tan.abs() > 1) & (input_df["y"] < 1)],
+        ]
     else:
-        query_pc = None
+        input_li = [input_df]
 
-    total_time = time.time()
-    inference_time = 0
-    iter = 0
-    while len(updating_pc) < len(input_df) * args.r:
-        pc_data = UpsampleData(
-            input_pc,
-            updating_pc,
-            query_pc,
-            patch_k=args.patch_k,
-            query_k=args.query_k,
-            output_size=len(input_df) * args.r,
-            device=device,
-            iter=iter,
-            num_op=args.num_op,
-            real_scanned=args.real_scanned,
-        )
-        print(f"Number of queries: {len(pc_data)}")
-        batch_size = 2048
+    output_pc_li = []
+    for input_df in input_li:
+        input_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
+        updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
 
-        # Data loader
-        data_loader = DataLoader(
-            pc_data,
-            num_workers=0,
-            batch_size=batch_size,
-            shuffle=True,
-            drop_last=False,
-        )
+        total_time = time.time()
+        inference_time = 0
+        while len(updating_pc) < len(input_df) * args.r:
+            pc_data = UpsampleData(
+                input_pc,
+                patch_k=args.patch_k,
+                query_k=args.query_k,
+                output_size=len(input_df) * args.r,
+                device=device,
+                num_op=args.num_op,
+                real_scanned=args.real_scanned,
+            )
+            print(f"Number of queries: {len(pc_data)}")
+            batch_size = 2048
 
-        for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
-            if args.marching_steps:
-                step_idx = (
-                    torch.arange(1, args.marching_steps + 1)
-                    .unsqueeze(0)
-                    .unsqueeze(2)
-                    .repeat(query.shape[0], 1, 1)
+            # Data loader
+            data_loader = DataLoader(
+                pc_data,
+                num_workers=0,
+                batch_size=batch_size,
+                shuffle=True,
+                drop_last=False,
+            )
+
+            for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
+                if args.marching_steps:
+                    step_idx = (
+                        torch.arange(1, args.marching_steps + 1)
+                        .unsqueeze(0)
+                        .unsqueeze(2)
+                        .repeat(query.shape[0], 1, 1)
+                    )
+
+                # Predict
+                start_time = time.time()
+                (tmp1, tmp2, tmp3, implicit_points, cumulative_depth, epsilon) = model(
+                    knn_coords, query.to(device)
                 )
+                output_coords = query * (cumulative_depth + epsilon)
+                # Record inference time
+                inference_time += time.time() - start_time
 
-            # Predict
-            start_time = time.time()
-            (tmp1, tmp2, tmp3, implicit_points, cumulative_depth, epsilon) = model(
-                knn_coords, query.to(device)
+                op_pos = op_pos.detach().cpu()
+                op_pc.append(op_pos)
+
+                output_coords = (
+                    (output_coords * scaling_factor.squeeze(1)).detach().cpu()
+                )
+                output_coords += op_pos
+                if args.real_scanned:
+                    valid_idx = noise_removal(output_coords, input_pc)
+                    output_coords = output_coords[valid_idx]
+                    scaling_factor = scaling_factor[valid_idx]
+                    implicit_points = implicit_points[valid_idx]
+                    op_pos = op_pos[valid_idx]
+                    step_idx = step_idx[valid_idx.detach().cpu()]
+
+                updating_pc = torch.cat([updating_pc, output_coords], dim=0)
+
+                if args.marching_steps:
+                    implicit_points = (implicit_points * scaling_factor).detach().cpu()
+                    implicit_points += op_pos.unsqueeze(1)
+                    implicit_points = torch.cat((implicit_points, step_idx), 2)
+                    implicit_points = torch.flatten(implicit_points, 0, 1)
+                    implicit_pc.append(torch.cat([implicit_points], dim=0))
+
+                count += output_coords.shape[0]
+
+                query.detach().cpu()
+                knn_coords.detach().cpu()
+                scaling_factor.detach().cpu()
+                del (
+                    query,
+                    knn_coords,
+                    scaling_factor,
+                    output_coords,
+                    implicit_points,
+                    cumulative_depth,
+                    op_pos,
+                    tmp1,
+                    tmp2,
+                    tmp3,
+                )
+                gc.collect()
+                torch.cuda.empty_cache()
+
+            garbage_collect(pc_data.__dict__.values())
+            print(len(updating_pc), len(input_df) * args.r)
+
+        # output_pc = torch.cat(output_pc, dim=0)
+        output_pc = updating_pc.detach().cpu().detach().numpy()
+        output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
+        if args.fps and len(output_pc) > len(input_df) * args.r:
+            query_pc = torch.tensor(
+                farthest_point_sampling(output_pc, len(input_df) * args.r)[
+                    ["x", "y", "z"]
+                ].values
             )
-            output_coords = query * (cumulative_depth + epsilon)
-            # Record inference time
-            inference_time += time.time() - start_time
+        output_pc_li.append(output_pc)
 
-            op_pos = op_pos.detach().cpu()
-            op_pc.append(op_pos)
+        print(f"Inference time: {inference_time} sec")
+        print(f"Total time: {time.time() - total_time} sec")
 
-            output_coords = (output_coords * scaling_factor.squeeze(1)).detach().cpu()
-            output_coords += op_pos
-            if args.real_scanned:
-                valid_idx = noise_removal(output_coords, input_pc, updating_pc)
-                output_coords = output_coords[valid_idx]
-                scaling_factor = scaling_factor[valid_idx]
-                implicit_points = implicit_points[valid_idx]
-                op_pos = op_pos[valid_idx]
-                step_idx = step_idx[valid_idx.detach().cpu()]
-
-            updating_pc = torch.cat([updating_pc, output_coords], dim=0)
-
-            if args.marching_steps:
-                implicit_points = (implicit_points * scaling_factor).detach().cpu()
-                implicit_points += op_pos.unsqueeze(1)
-                implicit_points = torch.cat((implicit_points, step_idx), 2)
-                implicit_points = torch.flatten(implicit_points, 0, 1)
-                implicit_pc.append(torch.cat([implicit_points], dim=0))
-
-            count += output_coords.shape[0]
-
-            query.detach().cpu()
-            knn_coords.detach().cpu()
-            scaling_factor.detach().cpu()
-            del (
-                query,
-                knn_coords,
-                scaling_factor,
-                output_coords,
-                implicit_points,
-                cumulative_depth,
-                op_pos,
-                tmp1,
-                tmp2,
-                tmp3,
-            )
-            gc.collect()
-            torch.cuda.empty_cache()
-
-        iter += 1
-        garbage_collect(pc_data.__dict__.values())
-
-    print(f"Inference time: {inference_time} sec")
-    print(f"Total time: {time.time() - total_time} sec")
-
-    # output_pc = torch.cat(output_pc, dim=0)
-    output_pc = updating_pc.detach().cpu().detach().numpy()
-    output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
-    output_pc = output_pc.values
-
+    output_pc = pd.concat(output_pc_li, axis=0).values
     filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
 
     # Save point cloud
@@ -181,19 +195,9 @@ if __name__ == "__main__":
         help="Input point cloud file name",
     )
     parser.add_argument(
-        "--gt-dir",
-        type=str,
-        help="Ground truth point cloud directory",
-    )
-    parser.add_argument(
         "--output-dir",
         type=str,
         help="Name of the output file",
-    )
-    parser.add_argument(
-        "--gt-queries",
-        action="store_true",
-        help="Sample queries from ground truth",
     )
     parser.add_argument(
         "--model",
@@ -236,6 +240,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--real-scanned",
+        action="store_true",
+        help="Real scanned data adaptation",
+    )
+    parser.add_argument(
+        "--fps",
         action="store_true",
         help="Real scanned data adaptation",
     )

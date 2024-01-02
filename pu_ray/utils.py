@@ -40,32 +40,32 @@ class QueryPointsData(Dataset):
                     & (input_df["x"] > 0)
                 ]
                 input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
-
-                num_chunks = 1
-                while True:
-                    try:
-                        input_chunks = torch.chunk(input_pc, num_chunks)
-
-                        input_knn_li = []
-                        for chunk in input_chunks:
-                            input_knn_li.append(
-                                KNN(
-                                    input_pc,
-                                    chunk,
-                                    16,
-                                    include_nearest=True,
-                                    cossim=True,
-                                    device=device,
-                                )[0]
-                            )
-                        break
-                    except torch.cuda.OutOfMemoryError:
-                        num_chunks *= 2
-
-                input_knn = torch.cat(input_knn_li, 0)
                 valid_input = input_pc
 
-                knn_std = torch.std(input_knn, 1)
+                # num_chunks = 1
+                # while True:
+                #     try:
+                #         input_chunks = torch.chunk(input_pc, num_chunks)
+
+                #         input_knn_li = []
+                #         for chunk in input_chunks:
+                #             input_knn_li.append(
+                #                 KNN(
+                #                     input_pc,
+                #                     chunk,
+                #                     16,
+                #                     include_nearest=True,
+                #                     cossim=True,
+                #                     device=device,
+                #                 )[0]
+                #             )
+                #         break
+                #     except torch.cuda.OutOfMemoryError:
+                #         num_chunks *= 2
+
+                # input_knn = torch.cat(input_knn_li, 0)
+
+                # knn_std = torch.std(input_knn, 1)
                 # knn_mean = torch.mean(input_knn, 1)
                 # valid_idx = (
                 #     torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
@@ -350,13 +350,10 @@ class UpsampleData(Dataset):
     def __init__(
         self,
         input_pc,
-        updating_pc,
-        query_pc,
         patch_k,
         query_k,
         device,
         output_size,
-        iter,
         num_op=None,
         real_scanned=False,
     ):
@@ -365,21 +362,18 @@ class UpsampleData(Dataset):
 
         input_pc = input_pc.to("cpu")
         input_df = pd.DataFrame(input_pc.cpu().numpy(), columns=["x", "y", "z"])
-        updating_pc = updating_pc.to("cpu")
-        updating_df = pd.DataFrame(updating_pc.cpu().numpy(), columns=["x", "y", "z"])
 
         if num_op == None:
-            num_op = len(updating_df) // 32
+            num_op = len(input_df) // 32
 
-        if query_pc == None:
-            query_pc = self.novel_queries(
-                updating_df,
-                updating_df,
-                query_k,
-                "cpu",
-                output_size,
-                real_scanned=real_scanned,
-            )
+        query_pc = self.novel_queries(
+            input_df,
+            input_df,
+            query_k,
+            "cpu",
+            output_size,
+            real_scanned=real_scanned,
+        )
 
         query_pc = query_pc.double().to("cpu")
 
@@ -388,8 +382,8 @@ class UpsampleData(Dataset):
         # else:
         op = (
             generate_op(
-                farthest_point_sampling(updating_df, num_op),
-                updating_df,
+                farthest_point_sampling(input_df, num_op),
+                input_df,
                 "cpu",
                 k=16,
                 calculate_mean=False,
@@ -401,25 +395,12 @@ class UpsampleData(Dataset):
         )
 
         knn_coords, _ = KNN(
-            updating_pc,
+            input_pc,
             query_pc,
             self.patch_k,
             include_nearest=True,
             cossim=False,
         )
-        if real_scanned:
-            knn_std = torch.std(knn_coords, 1)
-            std_avg = torch.mean(knn_std, 0)
-            std_std = torch.std(knn_std, 0)
-            valid_idx = torch.mean(knn_std, 1) > torch.mean(std_avg, 0) * 0.999**iter
-
-            std_std[0] *= 5
-            std_std[1] *= 3
-            std_std[2] *= 1
-            valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
-
-            query_pc = query_pc[valid_idx]
-            knn_coords = knn_coords[valid_idx]
 
         op_xyz, _ = KNN(op, query_pc, 1, include_nearest=True)
         op_xyz = op_xyz.squeeze()
@@ -470,64 +451,103 @@ class UpsampleData(Dataset):
         reference = torch.tensor(reference[["x", "y", "z"]].values).to(device)
 
         if real_scanned:
-            # point_avg = torch.mean(reference, 0)
-            # point_std = torch.std(reference, 0)
-            # point_std[0] *= 2
-            # point_std[1] *= 2
-            # point_std[2] *= 2
-            # valid_idx = torch.sum(torch.abs(target - point_avg) < point_std, 1) == 3
-            # target = target[valid_idx]
+            num_chunks = 1
+            while True:
+                try:
+                    input_chunks = torch.chunk(target, num_chunks)
 
-            perm = torch.randperm(target.size(0))
-            target = target[perm]
+                    input_knn_li = []
+                    for chunk in input_chunks:
+                        input_knn_li.append(
+                            KNN(
+                                target,
+                                chunk,
+                                16,
+                                include_nearest=True,
+                                cossim=False,
+                                device=device,
+                            )[0]
+                        )
+                    break
+                except torch.cuda.OutOfMemoryError:
+                    num_chunks *= 2
 
-            target_df = pd.DataFrame(
-                target.cpu().numpy(),
-                columns=["x", "y", "z"],
+            input_knn = torch.cat(input_knn_li, 0)
+
+            knn_std = torch.std(input_knn, 1)
+            knn_mean = torch.mean(input_knn, 1)
+            valid_idx = torch.sum(torch.abs(target - knn_mean) < knn_std, 1) == 3
+
+            target = target[valid_idx]
+            input_knn = input_knn[valid_idx]
+            knn_std = knn_std[valid_idx]
+
+            while True:
+                try:
+                    input_chunks = torch.chunk(target, num_chunks)
+
+                    input_knn_li = []
+                    for chunk in input_chunks:
+                        input_knn_li.append(
+                            KNN(
+                                target,
+                                chunk,
+                                16,
+                                include_nearest=True,
+                                cossim=True,
+                                device=device,
+                            )[0]
+                        )
+                    break
+                except torch.cuda.OutOfMemoryError:
+                    num_chunks *= 2
+            input_knn = torch.cat(input_knn_li, 0)
+
+            std_avg = torch.mean(knn_std, 0)
+            std_std = torch.std(knn_std, 0)
+            valid_idx = torch.sum(knn_std - std_avg > -std_std, 1) > 0
+
+            knn_std = knn_std[valid_idx]
+            target = target[valid_idx]
+            input_knn = input_knn[valid_idx]
+
+            farthest_neighbour_idx = torch.max(
+                torch.norm(input_knn - target.unsqueeze(1), dim=-1), -1
+            )[1]
+            farthest_neighbour = torch.cat(
+                [
+                    input_knn[idx][n].unsqueeze(0)
+                    for idx, n in enumerate(farthest_neighbour_idx)
+                ],
+                0,
             )
-            target = torch.tensor(
-                farthest_point_sampling(target_df, output_size // 24)[
-                    ["x", "y", "z"]
-                ].values
-            )
 
-        queries = []
-        for point in target:
-            rel_pos = reference - point.unsqueeze(0)
-            rel_dist = rel_pos.norm(dim=-1)
-            rel_vectors = rel_pos / rel_dist.unsqueeze(-1)
-
-            if real_scanned:
-                reference_vectors = reference / reference.norm(dim=-1, keepdim=True)
-                point_vector = point / point.norm(dim=-1)
-                # Cosine similarities
-                cossims = torch.sum(
-                    reference_vectors * point_vector.unsqueeze(0),
-                    dim=-1,
+            mult = output_size // len(target)
+            while True:
+                queries = torch.cat(
+                    [
+                        (target * i / mult + farthest_neighbour * (mult - i) / mult)
+                        for i in range(1, mult + 1)
+                    ],
+                    0,
                 )
-                criteria = cossims
+                queries = torch.unique(queries, dim=0)
+                if output_size > len(queries):
+                    mult += 1
+                else:
+                    break
 
-            else:
+        else:
+            for point in target:
+                queries = []
+                rel_pos = reference - point.unsqueeze(0)
+                rel_dist = rel_pos.norm(dim=-1)
+                rel_vectors = rel_pos / rel_dist.unsqueeze(-1)
+
                 criteria = -rel_dist
 
-            _, knn_indices = criteria.topk(k + 1, largest=True)
+                _, knn_indices = criteria.topk(k + 1, largest=True)
 
-            # queries.append((point.unsqueeze(0) + reference[knn_indices[1:]]) / 2)
-            if real_scanned:
-                queries += [
-                    (point + reference[knn_indices[i]]).unsqueeze(0) / 2
-                    for i in range(k, 0, -1)
-                    if torch.sum(
-                        torch.sum(
-                            rel_vectors[knn_indices[1 : i + 1]]
-                            * rel_vectors[knn_indices[i]],
-                            -1,
-                        )
-                        > math.cos(math.pi / 6)
-                    )
-                    == 1
-                ][:6]
-            else:
                 queries += [
                     (point + reference[knn_indices[i]]).unsqueeze(0) / 2
                     for i in range(1, k + 1)
@@ -542,13 +562,15 @@ class UpsampleData(Dataset):
                     == 1
                 ][:6]
 
+            queries = torch.cat(queries, 0)
+
         garbage_collect([target, reference])
 
         if real_scanned:
-            query_pc = torch.cat(queries, 0)
+            query_pc = queries
         else:
             query_df = pd.DataFrame(
-                torch.unique(torch.cat(queries, 0), dim=0).cpu().numpy(),
+                torch.unique(queries, dim=0).cpu().numpy(),
                 columns=["x", "y", "z"],
             )
             query_pc = torch.tensor(
@@ -721,15 +743,16 @@ def farthest_point_sampling(pc, num_sample):
     return downsampled
 
 
-def noise_removal(points, input_pc, updating_pc):
-    updating_knn = KNN(updating_pc, points, 16, include_nearest=True, cossim=True)[0]
+def noise_removal(points, input_pc):
+    knn = KNN(input_pc, points, 16, include_nearest=True, cossim=True)[0]
 
-    knn_avg = torch.mean(updating_knn, 1)
-    knn_std = torch.std(updating_knn, 1)
-    knn_std[:, 0] *= 5
-    knn_std[:, 1] *= 3
-    knn_std[:, 2] *= 1
+    knn_avg = torch.mean(knn, 1)
+    knn_std = torch.std(knn, 1)
     valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std, 1) == 3
+
+    std_avg = torch.mean(knn_std, 0)
+    std_std = torch.std(knn_std, 0)
+    valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std * 3, 1) == 3
 
     return valid_idx
 
