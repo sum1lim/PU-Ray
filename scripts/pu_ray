@@ -145,6 +145,9 @@ def main(args):
 
             garbage_collect(pc_data.__dict__.values())
 
+        print(f"Inference time: {inference_time} sec")
+        print(f"Total time: {time.time() - total_time} sec")
+
         # output_pc = torch.cat(output_pc, dim=0)
         output_pc = updating_pc.detach().cpu().detach().numpy()
         output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
@@ -154,9 +157,6 @@ def main(args):
             ]
 
         output_pc_li.append(output_pc)
-
-        print(f"Inference time: {inference_time} sec")
-        print(f"Total time: {time.time() - total_time} sec")
 
     output_pc = pd.concat(output_pc_li, axis=0).values
     filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
