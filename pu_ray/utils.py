@@ -17,169 +17,6 @@ from torch import nn, cos, sin
 from collections import OrderedDict
 
 
-class QueryPointsData(Dataset):
-    def __init__(
-        self,
-        input_dir,
-        reference_dir,
-        gt_dir,
-        device,
-        r=4,
-    ):
-        self.device = device
-
-        file_li = os.listdir(input_dir)
-
-        self.input_li = []
-        self.gt_li = []
-        for _, filename in tqdm(enumerate(file_li)):
-            try:
-                input_df = pd.read_csv(f"{input_dir}/{filename}", names=["x", "y", "z"])
-                input_df = input_df[
-                    (
-                        (input_df["x"] ** 2 + input_df["y"] ** 2 + input_df["z"] ** 2)
-                        ** (1 / 2)
-                        > 50000
-                    )
-                    & (input_df["x"] > 0)
-                ]
-                input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
-                valid_input = input_pc
-
-                # num_chunks = 1
-                # while True:
-                #     try:
-                #         input_chunks = torch.chunk(input_pc, num_chunks)
-
-                #         input_knn_li = []
-                #         for chunk in input_chunks:
-                #             input_knn_li.append(
-                #                 KNN(
-                #                     input_pc,
-                #                     chunk,
-                #                     16,
-                #                     include_nearest=True,
-                #                     cossim=True,
-                #                     device=device,
-                #                 )[0]
-                #             )
-                #         break
-                #     except torch.cuda.OutOfMemoryError:
-                #         num_chunks *= 2
-
-                # input_knn = torch.cat(input_knn_li, 0)
-
-                # knn_std = torch.std(input_knn, 1)
-                # knn_mean = torch.mean(input_knn, 1)
-                # valid_idx = (
-                #     torch.sum(torch.abs(input_pc - knn_mean) < knn_std * 1.5, 1) == 3
-                # )
-
-                # valid_input = input_pc[valid_idx]
-                # knn_std = knn_std[valid_idx]
-
-                # std_avg = torch.mean(knn_std, 0)
-                # std_std = torch.std(knn_std, 0)
-                # valid_idx = (
-                #     torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
-                # )
-                # valid_input = valid_input[valid_idx]
-
-                gt_df = pd.read_csv(
-                    f"{reference_dir}/{filename}", names=["x", "y", "z"]
-                )
-                gt_df = gt_df[
-                    (
-                        (gt_df["x"] ** 2 + gt_df["y"] ** 2 + gt_df["z"] ** 2) ** (1 / 2)
-                        > 50000
-                    )
-                    & (gt_df["x"] > 0)
-                ]
-                gt_pc = torch.tensor(gt_df.sample(frac=1).values).to(device)
-            except IsADirectoryError:
-                continue
-            print(filename)
-
-            try:
-                os.mkdir(f"{gt_dir}")
-            except FileExistsError:
-                None
-
-            if os.path.isfile(f"{gt_dir}/{filename}"):
-                None
-            else:
-                num_chunks = 256
-
-                gt_chunks = torch.chunk(gt_pc, num_chunks)
-                knn_std = []
-                knn_mean = []
-                for chunk in gt_chunks:
-                    knn_coords, _ = KNN(
-                        input_pc,
-                        chunk,
-                        16,
-                        include_nearest=True,
-                        cossim=True,
-                        device=device,
-                    )
-                    knn_std.append(torch.std(knn_coords, 1))
-                    knn_mean.append(torch.mean(knn_coords, 1))
-
-                knn_std = torch.cat(knn_std, 0)
-                knn_mean = torch.cat(knn_mean, 0)
-                valid_idx = (
-                    torch.sum(torch.abs(gt_pc - knn_mean) < knn_std * 1.5, 1) == 3
-                )
-
-                gt_pc = gt_pc[valid_idx]
-                knn_std = knn_std[valid_idx]
-
-                std_avg = torch.mean(knn_std, 0)
-                std_std = torch.std(knn_std, 0)
-                valid_idx = (
-                    torch.sum(torch.abs(knn_std - std_avg) < std_std * 1.5, 1) == 3
-                )
-
-                query_points = gt_pc[valid_idx]
-                query_points = pd.DataFrame(
-                    query_points.cpu().numpy(),
-                    columns=["x", "y", "z"],
-                )
-                query_points = farthest_point_sampling(
-                    query_points, len(valid_input) * r
-                )[["x", "y", "z"]]
-
-                np.savetxt(f"{gt_dir}/{filename}", query_points, delimiter=",")
-
-            scaling_factor = random.random() * 0.2 + 0.9
-            rotation_matrix = random_rotation().double().to(device)
-
-            valid_input /= 1000
-            self.input_li.append(
-                valid_input.to(device) @ rotation_matrix * scaling_factor
-            )
-
-            query_points = pd.read_csv(f"{gt_dir}/{filename}", names=["x", "y", "z"])
-            query_points /= 1000
-            self.gt_li.append(
-                torch.tensor(query_points.sample(frac=1).values).double().to(device)
-                @ rotation_matrix
-                * scaling_factor
-            )
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        return (
-            self.input_li[idx].to(self.device),
-            self.gt_li[idx].to(self.device),
-        )
-
-    def __len__(self):
-        return len(self.input_li)
-
-
 class TrainData(Dataset):
     """
     A Torch Dataset class to import point cloud data
@@ -950,50 +787,46 @@ class RayMarchingLoss(nn.Module):
             )
 
 
-class ChamferLoss(nn.Module):
-    def __init__(self):
-        super().__init__()
+def chamfer_distance(output_pc, gt_pc, device="cpu"):
+    pc1 = output_pc.squeeze().to(device)
+    pc2 = gt_pc.squeeze().to(device)
 
-    def forward(self, output_pc, gt_pc, device="cpu"):
-        pc1 = output_pc.squeeze().to(device)
-        pc2 = gt_pc.squeeze().to(device)
-
-        dist1 = torch.min(
-            torch.norm(
-                pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
-                dim=2,
-            )
-            ** 2,
-            1,
-        )[0]
-
-        dist2 = torch.min(
-            torch.norm(
-                pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
-                dim=2,
-            )
-            ** 2,
-            1,
-        )[0]
-
-        chamfer_distance = torch.mean(dist1) + torch.mean(dist2)
-
-        pc1 = pc1.detach().cpu()
-        pc2 = pc2.detach().cpu()
-        dist1 = dist1.detach().cpu()
-        dist2 = dist2.detach().cpu()
-        del (
-            pc1,
-            pc2,
-            dist1,
-            dist2,
+    dist1 = torch.min(
+        torch.norm(
+            pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+            - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+            dim=2,
         )
-        gc.collect()
-        torch.cuda.empty_cache()
+        ** 2,
+        1,
+    )[0]
 
-        return chamfer_distance
+    dist2 = torch.min(
+        torch.norm(
+            pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+            - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+            dim=2,
+        )
+        ** 2,
+        1,
+    )[0]
+
+    cd = torch.mean(dist1) + torch.mean(dist2)
+
+    pc1 = pc1.detach().cpu()
+    pc2 = pc2.detach().cpu()
+    dist1 = dist1.detach().cpu()
+    dist2 = dist2.detach().cpu()
+    del (
+        pc1,
+        pc2,
+        dist1,
+        dist2,
+    )
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    return cd
 
 
 def garbage_collect(items):
