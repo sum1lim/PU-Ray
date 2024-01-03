@@ -221,7 +221,6 @@ class UpsampleData(Dataset):
         # if real_scanned:
         #     op = torch.tensor([[0, 0, 0]])
         # else:
-        print(input_df.shape)
         op = (
             generate_op(
                 farthest_point_sampling(input_df, num_op),
