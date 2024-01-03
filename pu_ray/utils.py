@@ -205,7 +205,7 @@ class UpsampleData(Dataset):
         input_df = pd.DataFrame(input_pc.cpu().numpy(), columns=["x", "y", "z"])
 
         if num_op == None:
-            num_op = len(input_df) // 32
+            num_op = len(input_df) // 32 + 1
 
         query_pc = self.novel_queries(
             input_df,
@@ -221,6 +221,7 @@ class UpsampleData(Dataset):
         # if real_scanned:
         #     op = torch.tensor([[0, 0, 0]])
         # else:
+        print(input_df.shape)
         op = (
             generate_op(
                 farthest_point_sampling(input_df, num_op),
