@@ -67,7 +67,7 @@ def main(args):
                 output_size=len(input_df) * args.r,
                 device=device,
                 num_op=args.num_op,
-                real_scanned=args.real_scanned,
+                real_scanned=args.real_scanned or args.real_scanned_snippet,
             )
             print(f"Number of queries: {len(pc_data)}")
             batch_size = 2048
@@ -106,7 +106,7 @@ def main(args):
                     (output_coords * scaling_factor.squeeze(1)).detach().cpu()
                 )
                 output_coords += op_pos
-                if args.real_scanned:
+                if args.real_scanned or args.real_scanned_snippet:
                     valid_idx = noise_removal(output_coords, input_pc)
                     output_coords = output_coords[valid_idx]
                     scaling_factor = scaling_factor[valid_idx]
@@ -240,6 +240,11 @@ if __name__ == "__main__":
         "--real-scanned",
         action="store_true",
         help="Real scanned data adaptation",
+    )
+    parser.add_argument(
+        "--real-scanned-snippet",
+        action="store_true",
+        help="Snippet of real-scanned",
     )
     parser.add_argument(
         "--fps",
