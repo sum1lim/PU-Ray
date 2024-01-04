@@ -22,46 +22,42 @@ def main(args):
     elif args.pc2.endswith(".csv"):
         pc2_df = pd.read_csv(args.pc2, sep=",", names=["x", "y", "z"])
 
+    # dists1 = (pc1_df["x"] ** 2 + pc1_df["y"] ** 2 + pc1_df["z"] ** 2) ** (1 / 2)
+    # pc1_df = pc1_df[(dists1 > 30000)]
+
+    # dists2 = (pc2_df["x"] ** 2 + pc2_df["y"] ** 2 + pc2_df["z"] ** 2) ** (1 / 2)
+    # pc2_df = pc2_df[(dists2 > 30000)]
+
+    # pc1 = torch.tensor(pc1_df.values).to(device)
+    # pc2 = torch.tensor(pc2_df.values).to(device)
+
+    # CD = evaluate(pc1, pc2, device=device)
+    # print(f"Chamfer Distance: {CD}")
+
     dists1 = (pc1_df["x"] ** 2 + pc1_df["y"] ** 2 + pc1_df["z"] ** 2) ** (1 / 2)
-    pc1_df = pc1_df[(dists1 > 30000)]
+    tan1 = pc1_df["y"] / pc1_df["x"]
+    pc1_li = [
+        pc1_df[(dists1 > 30000) & (tan1.abs() < 1) & (pc1_df["x"] > 0)],
+        pc1_df[(dists1 > 30000) & (tan1.abs() < 1) & (pc1_df["x"] < 0)],
+        pc1_df[(dists1 > 30000) & (tan1.abs() > 1) & (pc1_df["y"] > 0)],
+        pc1_df[(dists1 > 30000) & (tan1.abs() > 1) & (pc1_df["y"] < 0)],
+    ]
 
     dists2 = (pc2_df["x"] ** 2 + pc2_df["y"] ** 2 + pc2_df["z"] ** 2) ** (1 / 2)
-    pc2_df = pc2_df[(dists2 > 30000)]
+    tan2 = pc2_df["y"] / pc2_df["x"]
+    pc2_li = [
+        pc2_df[(dists2 > 30000) & (tan2.abs() < 1) & (pc2_df["x"] > 0)],
+        pc2_df[(dists2 > 30000) & (tan2.abs() < 1) & (pc2_df["x"] < 0)],
+        pc2_df[(dists2 > 30000) & (tan2.abs() > 1) & (pc2_df["y"] > 0)],
+        pc2_df[(dists2 > 30000) & (tan2.abs() > 1) & (pc2_df["y"] < 0)],
+    ]
 
-    pc1 = torch.tensor(pc1_df.values).to(device)
-    pc2 = torch.tensor(pc2_df.values).to(device)
+    for idx in range(len(pc1_li)):
+        pc1 = torch.tensor(pc1_li[idx].values).to(device)
+        pc2 = torch.tensor(pc2_li[idx].values).to(device)
 
-    CD = evaluate(pc1, pc2, device=device)
-    print(f"Chamfer Distance: {CD}")
-
-    # dists1 = (pc1_df["x"] ** 2 + pc1_df["y"] ** 2 + pc1_df["z"] ** 2) ** (
-    #     1 / 2
-    # )
-    # tan1 = pc1_df["y"] / pc1_df["x"]
-    # pc1_li = [
-    #     pc1_df[(dists1 > 30000) & (tan1.abs() < 1) & (pc1_df["x"] > 0)],
-    #     pc1_df[(dists1 > 30000) & (tan1.abs() < 1) & (pc1_df["x"] < 0)],
-    #     pc1_df[(dists1 > 30000) & (tan1.abs() > 1) & (pc1_df["y"] > 0)],
-    #     pc1_df[(dists1 > 30000) & (tan1.abs() > 1) & (pc1_df["y"] < 0)],
-    # ]
-
-    # dists2 = (pc2_df["x"] ** 2 + pc2_df["y"] ** 2 + pc2_df["z"] ** 2) ** (
-    #     1 / 2
-    # )
-    # tan2 = pc2_df["y"] / pc2_df["x"]
-    # pc2_li = [
-    #     pc2_df[(dists2 > 30000) & (tan2.abs() < 1) & (pc2_df["x"] > 0)],
-    #     pc2_df[(dists2 > 30000) & (tan2.abs() < 1) & (pc2_df["x"] < 0)],
-    #     pc2_df[(dists2 > 30000) & (tan2.abs() > 1) & (pc2_df["y"] > 0)],
-    #     pc2_df[(dists2 > 30000) & (tan2.abs() > 1) & (pc2_df["y"] < 0)],
-    # ]
-
-    # for idx in range(len(enumerate(pc1_li))):
-    #     pc1 = torch.tensor(pc1_li[idx].values).to(device)
-    #     pc2 = torch.tensor(pc2_li[idx].values).to(device)
-
-    #     CD = evaluate(pc1, pc2, device=device)
-    #     print(f"Chamfer Distance: {CD}")
+        CD = evaluate(pc1, pc2, device=device)
+        print(f"Chamfer Distance: {CD}")
 
 
 if __name__ == "__main__":
