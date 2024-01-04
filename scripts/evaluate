@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import argparse
+import torch
+import pandas as pd
+from pu_ray.utils import chamfer_distance
+
+
+def main(args):
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+
+    if args.pc1.endswith(".xyz"):
+        pc1_df = pd.read_csv(args.pc1, sep=" ", names=["x", "y", "z"])
+    elif args.pc1.endswith(".csv"):
+        pc1_df = pd.read_csv(args.pc1, sep=",", names=["x", "y", "z"])
+
+    if args.pc2.endswith(".xyz"):
+        pc2_df = pd.read_csv(args.pc2, sep=" ", names=["x", "y", "z"])
+    elif args.pc2.endswith(".csv"):
+        pc2_df = pd.read_csv(args.pc2, sep=",", names=["x", "y", "z"])
+
+    pc1 = torch.tensor(pc1_df.values).to(device)
+    pc2 = torch.tensor(pc2_df.values).to(device)
+
+    CD = chamfer_distance(pc1, pc2, device=device)
+    
+    print(f"Chamfer Distance: {CD}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--pc1",
+        type=str,
+        help="Point Cloud 1",
+    )
+    parser.add_argument(
+        "--pc2",
+        type=str,
+        help="Point Cloud 2",
+    )
+
+    args = parser.parse_args()
+
+    main(args)

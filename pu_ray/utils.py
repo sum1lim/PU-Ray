@@ -595,9 +595,9 @@ def noise_removal(points, input_pc):
     knn_std = torch.std(knn, 1)
     valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 3, 1) == 3
 
-    std_avg = torch.mean(knn_std, 0)
-    std_std = torch.std(knn_std, 0)
-    valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std * 3, 1) == 3
+    # std_avg = torch.mean(knn_std, 0)
+    # std_std = torch.std(knn_std, 0)
+    # valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std * 3, 1) == 3
 
     return valid_idx
 
@@ -787,44 +787,56 @@ class RayMarchingLoss(nn.Module):
             )
 
 
-def chamfer_distance(output_pc, gt_pc, device="cpu"):
-    pc1 = output_pc.squeeze().to(device)
-    pc2 = gt_pc.squeeze().to(device)
+def chamfer_distance(pc1, pc2, device="cpu"):
+    pc1 = pc1.to(device)
+    pc2 = pc2.to(device)
 
-    dist1 = torch.min(
-        torch.norm(
-            pc1.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-            - pc2.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
-            dim=2,
-        )
-        ** 2,
-        1,
-    )[0]
+    num_chunks = 1
+    while True:
+        try:
+            pc1_chunks = torch.chunk(pc1, num_chunks)
 
-    dist2 = torch.min(
-        torch.norm(
-            pc2.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-            - pc1.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
-            dim=2,
-        )
-        ** 2,
-        1,
-    )[0]
+            dist1_li = []
+            for chunk in pc1_chunks:
+                dist1_li.append(
+                    torch.min(
+                        torch.norm(
+                            chunk.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
+                            - pc2.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                            dim=2,
+                        ),
+                        1,
+                    )[0]
+                )
+            break
+        except torch.cuda.OutOfMemoryError:
+            num_chunks *= 2
+
+    dist1 = torch.cat(dist1_li, 0)
+
+    while True:
+        try:
+            pc2_chunks = torch.chunk(pc2, num_chunks)
+
+            dist2_li = []
+            for chunk in pc2_chunks:
+                dist2_li.append(
+                    torch.min(
+                        torch.norm(
+                            chunk.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
+                            - pc1.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                            dim=2,
+                        ),
+                        1,
+                    )[0]
+                )
+            break
+        except torch.cuda.OutOfMemoryError:
+            num_chunks *= 2
+
+    dist2 = torch.cat(dist2_li, 0)
 
     cd = torch.mean(dist1) + torch.mean(dist2)
-
-    pc1 = pc1.detach().cpu()
-    pc2 = pc2.detach().cpu()
-    dist1 = dist1.detach().cpu()
-    dist2 = dist2.detach().cpu()
-    del (
-        pc1,
-        pc2,
-        dist1,
-        dist2,
-    )
-    gc.collect()
-    torch.cuda.empty_cache()
 
     return cd
 

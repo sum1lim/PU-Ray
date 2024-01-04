@@ -14,7 +14,6 @@ setup(
         ./scripts/pu_ray
         ./scripts/train_model
         ./scripts/test_model
-        ./scripts/generate_query_points
-        ./scripts/train_query_points
+        ./scripts/evaluate
     """.split(),
 )
