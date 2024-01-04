@@ -801,8 +801,8 @@ def chamfer_distance(pc1, pc2, device="cpu"):
                 dist1_li.append(
                     torch.min(
                         torch.norm(
-                            chunk.unsqueeze(0).repeat([pc2.shape[0], 1, 1])
-                            - pc2.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                            pc2.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
+                            - chunk.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
                             dim=2,
                         ),
                         1,
@@ -823,8 +823,8 @@ def chamfer_distance(pc1, pc2, device="cpu"):
                 dist2_li.append(
                     torch.min(
                         torch.norm(
-                            chunk.unsqueeze(0).repeat([pc1.shape[0], 1, 1])
-                            - pc1.unsqueeze(1).repeat([1, chunk.shape[0], 1]),
+                            pc1.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
+                            - chunk.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
                             dim=2,
                         ),
                         1,
