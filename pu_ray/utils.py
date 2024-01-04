@@ -787,7 +787,7 @@ class RayMarchingLoss(nn.Module):
             )
 
 
-def chamfer_distance(pc1, pc2, device="cpu"):
+def evaluate(pc1, pc2, device="cpu"):
     pc1 = pc1.to(device)
     pc2 = pc2.to(device)
 

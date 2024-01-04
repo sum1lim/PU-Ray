@@ -44,10 +44,10 @@ def main(args):
         )
         tan = input_df["y"] / input_df["x"]
         input_li = [
-            input_df[(dists > 30000) & (tan.abs() < 1) & (input_df["x"] > 1)],
-            input_df[(dists > 30000) & (tan.abs() < 1) & (input_df["x"] < 1)],
-            input_df[(dists > 30000) & (tan.abs() > 1) & (input_df["y"] > 1)],
-            input_df[(dists > 30000) & (tan.abs() > 1) & (input_df["y"] < 1)],
+            input_df[(dists > 30000) & (tan.abs() < 1) & (input_df["x"] > 0)],
+            input_df[(dists > 30000) & (tan.abs() < 1) & (input_df["x"] < 0)],
+            input_df[(dists > 30000) & (tan.abs() > 1) & (input_df["y"] > 0)],
+            input_df[(dists > 30000) & (tan.abs() > 1) & (input_df["y"] < 0)],
         ]
     else:
         input_li = [input_df]
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--real-scanned-snippet",
         action="store_true",
-        help="Snippet of real-scanned",
+        help="Real scanned data adaptation (small snippet)",
     )
     parser.add_argument(
         "--fps",
