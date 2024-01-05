@@ -594,7 +594,7 @@ def noise_removal(points, input_pc):
 
     knn_avg = torch.mean(knn, 1)
     knn_std = torch.std(knn, 1)
-    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 3, 1) == 3
+    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 5, 1) == 3
 
     # std_avg = torch.mean(knn_std, 0)
     # std_std = torch.std(knn_std, 0)
