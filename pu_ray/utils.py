@@ -347,7 +347,8 @@ class UpsampleData(Dataset):
 
             std_avg = torch.mean(knn_std, 0)
             std_std = torch.std(knn_std, 0)
-            valid_idx = torch.sum(knn_std - std_avg > -std_std, 1) > 0
+            valid_idx = torch.sum(knn_std[:, 0:2] - std_avg[0:2] > -std_std[0:2], 1) > 0
+            valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std * 3, 1) == 3
 
             knn_std = knn_std[valid_idx]
             target = target[valid_idx]
