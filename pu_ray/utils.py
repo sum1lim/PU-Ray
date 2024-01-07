@@ -240,7 +240,7 @@ class UpsampleData(Dataset):
             query_pc,
             self.patch_k,
             include_nearest=True,
-            cossim=False,
+            cossim=real_scanned,
             device=self.device,
         )
 
@@ -354,26 +354,49 @@ class UpsampleData(Dataset):
             target = target[valid_idx]
             input_knn = input_knn[valid_idx]
 
-            farthest_neighbour_idx = torch.max(
-                torch.norm(input_knn - target.unsqueeze(1), dim=-1), -1
-            )[1]
-            farthest_neighbour = torch.cat(
-                [
-                    input_knn[idx][n].unsqueeze(0)
-                    for idx, n in enumerate(farthest_neighbour_idx)
-                ],
-                0,
-            )
+            # farthest_neighbour_idx = torch.max(
+            #     torch.norm(input_knn - target.unsqueeze(1), dim=-1), -1
+            # )[1]
+            # farthest_neighbour = torch.cat(
+            #     [
+            #         input_knn[idx][n].unsqueeze(0)
+            #         for idx, n in enumerate(farthest_neighbour_idx)
+            #     ],
+            #     0,
+            # )
 
-            mult = output_size // len(target) + 1
+            knn_dists = torch.norm(input_knn - target.unsqueeze(1), dim=-1)
+            dist_mean = torch.mean(knn_dists.flatten())
+            target = target.unsqueeze(1).repeat(1, 6, 1)[knn_dists > dist_mean]
+
+            valid_neighbour = input_knn[knn_dists > dist_mean]
+            valid_dists = knn_dists[knn_dists > dist_mean]
+            valid_dist_mean = torch.mean(knn_dists[knn_dists > dist_mean])
+
+            mult = output_size // len(target)
             while True:
-                queries = torch.cat(
-                    [
-                        (target * i / mult + farthest_neighbour * (mult - i) / mult)
-                        for i in range(1, mult + 1)
-                    ],
-                    0,
-                )
+                # queries = torch.cat(
+                #     [
+                #         (target * i / mult + valid_neighbour * (mult - i) / mult)
+                #         for i in range(1, mult + 1)
+                #     ],
+                #     0,
+                # )
+
+                queries = []
+                for idx, point in enumerate(target):
+                    dynamic_mult = int(mult * valid_dists[idx] / valid_dist_mean) + 1
+                    for i in range(1, dynamic_mult):
+                        queries.append(
+                            (
+                                point * i / dynamic_mult
+                                + valid_neighbour[idx]
+                                * (dynamic_mult - i)
+                                / dynamic_mult
+                            ).unsqueeze(0)
+                        )
+
+                queries = torch.cat(queries, 0)
                 queries = torch.unique(queries, dim=0)
                 if output_size > len(queries):
                     mult += 1
@@ -485,7 +508,6 @@ def read_test_file(filename):
 
 def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
     if cossim:
-        query_vector = xyz.to(device) / xyz.to(device).norm(dim=-1, keepdim=True)
         reference_vectors = references.to(device) / references.to(device).norm(
             dim=-1, keepdim=True
         )
@@ -494,13 +516,20 @@ def KNN(references, xyz, k, include_nearest=False, cossim=False, device="cpu"):
         num_chunks = 1
         while True:
             try:
-                chunks = torch.chunk(query_vector, num_chunks)
+                chunks = torch.chunk(xyz, num_chunks)
 
                 criteria_li = []
                 for chunk in chunks:
+                    query_vector = chunk.to(device) / chunk.to(device).norm(
+                        dim=-1, keepdim=True
+                    )
                     cossim = torch.sum(
-                        reference_vectors.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
-                        * chunk.unsqueeze(1).repeat([1, reference_vectors.shape[0], 1]),
+                        reference_vectors.unsqueeze(0).repeat(
+                            [query_vector.shape[0], 1, 1]
+                        )
+                        * query_vector.unsqueeze(1).repeat(
+                            [1, reference_vectors.shape[0], 1]
+                        ),
                         dim=-1,
                     )
                     criteria_li.append(cossim)
@@ -594,7 +623,7 @@ def noise_removal(points, input_pc):
 
     knn_avg = torch.mean(knn, 1)
     knn_std = torch.std(knn, 1)
-    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 5, 1) == 3
+    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 3, 1) == 3
 
     # std_avg = torch.mean(knn_std, 0)
     # std_std = torch.std(knn_std, 0)
