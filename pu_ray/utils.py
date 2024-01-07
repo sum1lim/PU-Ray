@@ -240,7 +240,7 @@ class UpsampleData(Dataset):
             query_pc,
             self.patch_k,
             include_nearest=True,
-            cossim=real_scanned,
+            cossim=False,
             device=self.device,
         )
 
@@ -305,7 +305,7 @@ class UpsampleData(Dataset):
                                 target,
                                 chunk,
                                 6,
-                                include_nearest=True,
+                                include_nearest=False,
                                 cossim=False,
                                 device=device,
                             )[0]
@@ -373,7 +373,7 @@ class UpsampleData(Dataset):
             valid_dists = knn_dists[knn_dists > dist_mean]
             valid_dist_mean = torch.mean(knn_dists[knn_dists > dist_mean])
 
-            mult = output_size // len(target)
+            mult = output_size // len(target) + 1
             while True:
                 # queries = torch.cat(
                 #     [
@@ -618,16 +618,22 @@ def farthest_point_sampling(pc, num_sample, device="cuda"):
     return downsampled
 
 
-def noise_removal(points, input_pc):
-    knn = KNN(input_pc, points, 6, include_nearest=True, cossim=True)[0]
+def noise_removal(points, input_pc, k):
+    knn = KNN(input_pc, points, 32, include_nearest=False, cossim=False)[0]
 
     knn_avg = torch.mean(knn, 1)
     knn_std = torch.std(knn, 1)
-    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std * 3, 1) == 3
+    knn_std[:, 0] *= 3
+    knn_std[:, 1] *= 3
+    knn_std[:, 2] *= 3
+    valid_idx = torch.sum(torch.abs(points - knn_avg) < knn_std, 1) == 3
 
     # std_avg = torch.mean(knn_std, 0)
     # std_std = torch.std(knn_std, 0)
-    # valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std * 3, 1) == 3
+    # std_std[0] *=3
+    # std_std[1] *=3
+    # std_std[2] *=1
+    # valid_idx *= torch.sum(torch.abs(knn_std - std_avg) < std_std, 1) == 3
 
     return valid_idx
 

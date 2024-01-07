@@ -70,7 +70,7 @@ def main(args):
                 real_scanned=args.real_scanned or args.real_scanned_snippet,
             )
             print(f"Number of queries: {len(pc_data)}")
-            batch_size = 2048
+            batch_size = 512
 
             # Data loader
             data_loader = DataLoader(
@@ -107,7 +107,7 @@ def main(args):
                 )
                 output_coords += op_pos
                 if args.real_scanned or args.real_scanned_snippet:
-                    valid_idx = noise_removal(output_coords, input_pc)
+                    valid_idx = noise_removal(output_coords, input_pc, k=args.patch_k)
                     output_coords = output_coords[valid_idx]
                     scaling_factor = scaling_factor[valid_idx]
                     implicit_points = implicit_points[valid_idx]
