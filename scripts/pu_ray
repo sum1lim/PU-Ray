@@ -70,7 +70,7 @@ def main(args):
                 real_scanned=args.real_scanned or args.real_scanned_snippet,
             )
             print(f"Number of queries: {len(pc_data)}")
-            batch_size = 512
+            batch_size = 2048
 
             # Data loader
             data_loader = DataLoader(
