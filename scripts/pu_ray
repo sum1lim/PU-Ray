@@ -70,13 +70,12 @@ def main(args):
                 real_scanned=args.real_scanned or args.real_scanned_snippet,
             )
             print(f"Number of queries: {len(pc_data)}")
-            batch_size = 2048
 
             # Data loader
             data_loader = DataLoader(
                 pc_data,
                 num_workers=0,
-                batch_size=batch_size,
+                batch_size=args.batch_size,
                 shuffle=True,
                 drop_last=False,
             )
@@ -201,6 +200,12 @@ if __name__ == "__main__":
         "--model",
         type=str,
         help="Model name",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=2048,
+        help="Batch size",
     )
     parser.add_argument(
         "--patch-k",
