@@ -1,0 +1,3 @@
+Testing puray_train2test
+Number of test samples: 221184
+MAE: 0.03869064006087997 / RMSE: 0.05453878553763583

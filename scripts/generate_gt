@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import torch
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from pu_ray.utils import KNN, farthest_point_sampling, select_aoi_points
+
+
+def main(args):
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    try:
+        os.mkdir(f"{args.aoi}_gt")
+    except FileExistsError:
+        None
+
+    file_li = os.listdir(args.aoi)
+    for idx, f in tqdm(enumerate(file_li)):
+        if os.path.isfile(f"{args.aoi}_gt/{f}"):
+            continue
+
+        try:
+            input_df = pd.read_csv(f"{args.aoi}/{f}", names=["x", "y", "z"])
+            input_df = input_df[
+                (input_df["x"] ** 2 + input_df["y"] ** 2 + input_df["z"] ** 2)
+                ** (1 / 2)
+                > args.min_dist
+            ]
+            input_pc = torch.tensor(input_df.sample(frac=1).values).to(device)
+
+            reference_df = pd.read_csv(f"{args.reference}/{f}", names=["x", "y", "z"])
+            reference_df = reference_df[
+                (
+                    reference_df["x"] ** 2
+                    + reference_df["y"] ** 2
+                    + reference_df["z"] ** 2
+                )
+                ** (1 / 2)
+                > args.min_dist
+            ]
+            reference_pc = torch.tensor(reference_df.sample(frac=1).values).to(device)
+        except IsADirectoryError:
+            continue
+        print(f)
+
+        try:
+            gt_points, _ = select_aoi_points(
+                reference_pc, input_pc, device, num_chunks=128
+            )
+
+            gt_points = pd.DataFrame(
+                gt_points.cpu().numpy(),
+                columns=["x", "y", "z"],
+            )
+            gt_points = farthest_point_sampling(gt_points, len(input_pc) * args.r)[
+                ["x", "y", "z"]
+            ]
+        except RuntimeError:
+            print(f"CUDA Memory error skipping {f}")
+            continue
+
+        np.savetxt(f"{args.aoi}_gt/{f}", gt_points, delimiter=",")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--aoi",
+        type=str,
+        help="AOI point cloud directory path",
+    )
+    parser.add_argument(
+        "--reference",
+        type=str,
+        help="Ground truth directory path",
+    )
+    parser.add_argument(
+        "--r",
+        type=int,
+        default=4,
+        help="Upsampling rate",
+    )
+    parser.add_argument(
+        "--min-dist",
+        type=float,
+        help="Minimum distance to upsample (for real-scanned)",
+    )
+
+    args = parser.parse_args()
+
+    main(args)

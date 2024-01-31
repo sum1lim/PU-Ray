@@ -1,0 +1,3 @@
+Testing puray_supervised
+Number of test samples: 221184
+MAE: 0.019659020086556362 / RMSE: 0.03064345124293969

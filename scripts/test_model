@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import torch
+import gc
+from tqdm import tqdm
+from pu_ray.utils import TrainData, load_model
+from pu_ray.models import PUray
+from torch.utils.data import DataLoader
+from collections import OrderedDict
+
+
+def main(args):
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    if args.verbose:
+        log_target = sys.stdout
+    else:
+        log_target = open(f"./log/{args.model}_test.log", "w")
+
+    print(f"Testing {args.model}", file=log_target)
+
+    pc_data = TrainData(
+        args.input_dir,
+        args.query_dir,
+        patch_k=args.patch_k,
+        device=device,
+        num_query=args.num_query,
+        num_op=args.num_op,
+    )
+
+    print(f"Number of test samples: {len(pc_data)}", file=log_target)
+
+    # Data loader
+    data_loader = DataLoader(
+        pc_data,
+        num_workers=0,
+        batch_size=512,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    model = load_model(args.model, PUray, device, args.marching_steps)
+
+    count = 0
+    errs = []
+    for query, knn_coords, label in tqdm(data_loader):
+        # Predict
+        (
+            tmp1,
+            tmp2,
+            tmp3,
+            tmp4,
+            cumulative_depth,
+            epsilon,
+        ) = model(knn_coords, query)
+        output_coords = query * (cumulative_depth + epsilon)
+
+        # Calculate the error
+        output_depth = torch.norm(output_coords, dim=-1).detach().cpu()
+        errs.append(torch.absolute(output_depth - label.detach().cpu()))
+        count += output_depth.shape[0]
+
+    errs = torch.cat(errs, 0)
+    outstr = f"MAE: {torch.mean(torch.absolute(errs))} / RMSE: {torch.sqrt(torch.mean(torch.square(errs)))}"
+    print(outstr, file=log_target)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--input-dir",
+        type=str,
+        help="Train data directory",
+    )
+    parser.add_argument(
+        "--query-dir",
+        type=str,
+        help="Query data directory",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Model name",
+    )
+    parser.add_argument(
+        "--patch-k",
+        type=int,
+        default=16,
+        help="Patch size",
+    )
+    parser.add_argument(
+        "--marching-steps",
+        type=int,
+        default=3,
+        help="Marching steps",
+    )
+    parser.add_argument(
+        "--num-query",
+        type=int,
+        default=1024,
+        help="Number of testing samples",
+    )
+    parser.add_argument(
+        "--num-op",
+        type=int,
+        help="Number of observation points",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print to stdout",
+    )
+
+    args = parser.parse_args()
+
+    main(args)

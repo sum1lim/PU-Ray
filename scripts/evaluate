@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+import argparse
+import time
+import torch
+import pandas as pd
+from pu_ray.utils import evaluate, select_aoi_points
+
+
+def main(args):
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    while True:
+        try:
+            # if args.aoi.endswith(".xyz"):
+            #     aoi_df = pd.read_csv(args.aoi, sep=" ", names=["x", "y", "z"])
+            # elif args.aoi.endswith(".csv"):
+            #     aoi_df = pd.read_csv(args.aoi, sep=",", names=["x", "y", "z"])
+
+            if args.pc1.endswith(".xyz"):
+                pc1_df = pd.read_csv(args.pc1, sep=" ", names=["x", "y", "z"])
+            elif args.pc1.endswith(".csv"):
+                pc1_df = pd.read_csv(args.pc1, sep=",", names=["x", "y", "z"])
+
+            if args.pc2.endswith(".xyz"):
+                pc2_df = pd.read_csv(args.pc2, sep=" ", names=["x", "y", "z"])
+            elif args.pc2.endswith(".csv"):
+                pc2_df = pd.read_csv(args.pc2, sep=",", names=["x", "y", "z"])
+
+            break
+        except FileNotFoundError:
+            if args.wait:
+                print("Waiting for the point cloud ...")
+                time.sleep(10)
+                continue
+            else:
+                exit(1)
+
+    # aoi = torch.tensor(aoi_df.values).to(device)
+    pc1 = torch.tensor(pc1_df.values).to(device)
+    pc2 = torch.tensor(pc2_df.values).to(device)
+
+    dists1 = torch.norm(pc1, dim=1)
+    x1 = pc1[:, 0]
+    y1 = pc1[:, 1]
+    tan1 = y1 / x1
+    pc1_li = [
+        pc1[(dists1 > args.min_dist)],
+    ]
+
+    dists2 = torch.norm(pc2, dim=1)
+    x2 = pc2[:, 0]
+    y2 = pc2[:, 1]
+    tan2 = y2 / x2
+    pc2_li = [
+        pc2[(dists2 > args.min_dist)],
+    ]
+
+    for pc1 in pc1_li:
+        if len(pc1) < 100:
+            exit(1)
+
+    for pc2 in pc2_li:
+        if len(pc2) < 100:
+            exit(1)
+
+    cd_list = []
+    for idx in range(len(pc1_li)):
+        pc1 = torch.tensor(pc1_li[idx]).to(device)
+        pc2 = torch.tensor(pc2_li[idx]).to(device)
+
+        print(
+            f"Point cloud 1 size: {pc1.shape[0]} / Point cloud 2 size: {pc2.shape[0]}"
+        )
+
+        # pc1, _ = select_aoi_points(pc1, aoi, device, num_chunks=128)
+        # pc2, _ = select_aoi_points(pc2, aoi, device, num_chunks=128)
+
+        # print(
+        #     f"Point cloud 1 size: {pc1.shape[0]} / Point cloud 2 size: {pc2.shape[0]}"
+        # )
+
+        CD, HD = evaluate(pc1, pc2, device=device)
+        print(f"Chamfer Distance: {CD}")
+        print(f"Hausdorff Distance: {HD}")
+
+        cd_list.append(CD)
+
+    if args.log:
+        result_string = args.pc1.split("/")[-1]
+        for cd in cd_list:
+            result_string += f",{cd}"
+
+        with open(args.log, "a") as f:
+            f.write(result_string + "\n")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--aoi",
+        type=str,
+        help="AOI point cloud directory path",
+    )
+    parser.add_argument(
+        "--pc1",
+        type=str,
+        help="Point Cloud 1",
+    )
+    parser.add_argument(
+        "--pc2",
+        type=str,
+        help="Point Cloud 2",
+    )
+    parser.add_argument(
+        "--log",
+        type=str,
+        help="log file name",
+    )
+    parser.add_argument(
+        "--wait",
+        action="store_true",
+        help="Wait until all point clouds are ready",
+    )
+    parser.add_argument(
+        "--min-dist",
+        type=float,
+        help="Minimum distance to upsample (for real-scanned)",
+    )
+
+    args = parser.parse_args()
+
+    main(args)

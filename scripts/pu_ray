@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import time
+import torch
+import gc
+import pandas as pd
+import numpy as np
+import open3d as o3d
+from tqdm import tqdm
+from pu_ray.utils import (
+    UpsampleData,
+    load_model,
+    farthest_point_sampling,
+    garbage_collect,
+    select_aoi_points,
+)
+from pu_ray.models import PUray
+from torch.utils.data import DataLoader
+
+
+def main(args):
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    print(f"Upsampling {args.input} with {args.marching_steps} steps")
+
+    model = load_model(args.model, PUray, device, args.marching_steps)
+
+    count = 0
+    implicit_pc = []
+    op_pc = []
+
+    if args.input.endswith(".xyz"):
+        df = pd.read_csv(args.input, sep=" ", names=["x", "y", "z"])
+    elif args.input.endswith(".csv"):
+        df = pd.read_csv(args.input, sep=",", names=["x", "y", "z"])
+
+    if args.real_scanned:
+        dists = (df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2) ** (1 / 2)
+        tan = df["y"] / df["x"]
+        input_li = [
+            df[(dists > args.min_dist) & (tan.abs() < 1) & (df["x"] > 0)],
+            df[(dists > args.min_dist) & (tan.abs() < 1) & (df["x"] < 0)],
+            df[(dists > args.min_dist) & (tan.abs() > 1) & (df["y"] > 0)],
+            df[(dists > args.min_dist) & (tan.abs() > 1) & (df["y"] < 0)],
+        ]
+    else:
+        input_li = [df]
+
+    original_pc = torch.tensor(df[["x", "y", "z"]].values).double()
+
+    total_time = time.time()
+    inference_time = 0
+    output_pc_li = []
+    for input_df in input_li:
+        updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
+        num_points = 0
+        if len(input_df) > 14000:
+            input_df = farthest_point_sampling(input_df, 14000)
+        while len(updating_pc) < len(input_df) * args.r:
+            if len(updating_pc) == num_points:
+                break
+            else:
+                num_points = len(updating_pc)
+            try:
+                input_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
+                # if args.real_scanned:
+                #     updating_pc, _ = select_aoi_points(
+                #         updating_pc, original_pc, device, num_chunks=1
+                #     )
+                pc_data = UpsampleData(
+                    updating_pc,
+                    patch_k=args.patch_k,
+                    query_k=args.query_k,
+                    output_size=len(input_df) * args.r,
+                    device=device,
+                    num_op=args.num_op,
+                    real_scanned=args.real_scanned,
+                )
+            except IndexError:
+                print("Not enough points in the point cloud")
+                break
+            except RuntimeError:
+                print("Reducing input size")
+                print(f"Before {len(input_df)}")
+                input_df = farthest_point_sampling(input_df, int(len(input_df) * 0.9))
+                print(f"After {len(input_df)}")
+
+            print(f"Number of queries: {len(pc_data)}")
+
+            # Data loader
+            data_loader = DataLoader(
+                pc_data,
+                num_workers=0,
+                batch_size=args.batch_size,
+                shuffle=True,
+                drop_last=False,
+            )
+
+            for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
+                if args.marching_steps:
+                    step_idx = (
+                        torch.arange(1, args.marching_steps + 1)
+                        .unsqueeze(0)
+                        .unsqueeze(2)
+                        .repeat(query.shape[0], 1, 1)
+                    )
+
+                # Predict
+                start_time = time.time()
+                (tmp1, tmp2, tmp3, implicit_points, cumulative_depth, epsilon) = model(
+                    knn_coords, query.to(device)
+                )
+                output_coords = query * (cumulative_depth + epsilon)
+                # Record inference time
+                inference_time += time.time() - start_time
+
+                op_pos = op_pos.detach().cpu()
+                op_pc.append(op_pos)
+
+                output_coords = (
+                    (output_coords * scaling_factor.squeeze(1)).detach().cpu()
+                )
+                output_coords += op_pos
+                if args.real_scanned:
+                    output_coords, valid_idx = select_aoi_points(
+                        output_coords, input_pc, device, num_chunks=1
+                    )
+                    output_coords = output_coords.detach().cpu()
+                    valid_idx = valid_idx.detach().cpu()
+                    scaling_factor = scaling_factor[valid_idx]
+                    implicit_points = implicit_points[valid_idx]
+                    op_pos = op_pos[valid_idx]
+                    step_idx = step_idx[valid_idx.detach().cpu()]
+
+                updating_pc = torch.cat(
+                    [updating_pc.detach().cpu(), output_coords], dim=0
+                )
+
+                if args.marching_steps:
+                    implicit_points = (implicit_points * scaling_factor).detach().cpu()
+                    implicit_points += op_pos.unsqueeze(1)
+                    implicit_points = torch.cat((implicit_points, step_idx), 2)
+                    implicit_points = torch.flatten(implicit_points, 0, 1)
+                    implicit_pc.append(torch.cat([implicit_points], dim=0))
+
+                count += output_coords.shape[0]
+
+                query.detach().cpu()
+                knn_coords.detach().cpu()
+                scaling_factor.detach().cpu()
+                del (
+                    query,
+                    knn_coords,
+                    scaling_factor,
+                    output_coords,
+                    implicit_points,
+                    cumulative_depth,
+                    op_pos,
+                    tmp1,
+                    tmp2,
+                    tmp3,
+                )
+                gc.collect()
+                torch.cuda.empty_cache()
+
+            garbage_collect(pc_data.__dict__.values())
+
+            # if args.real_scanned:
+            #     break
+
+        # output_pc = torch.cat(output_pc, dim=0)
+        output_pc = updating_pc.detach().cpu().detach().numpy()
+        output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
+        if args.fps and len(output_pc) > len(input_df) * args.r:
+            output_pc = farthest_point_sampling(output_pc, len(input_df) * args.r)[
+                ["x", "y", "z"]
+            ]
+
+        output_pc_li.append(output_pc)
+
+    print(f"Inference time: {inference_time} sec")
+    print(f"Total time: {time.time() - total_time} sec")
+
+    output_pc = pd.concat(output_pc_li, axis=0).values
+    filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
+
+    # Save point cloud
+    try:
+        os.mkdir(f"./output/{args.output_dir}")
+    except FileExistsError:
+        None
+    output_file = f"./output/{args.output_dir}/{filename}.xyz"
+    implicit_file = f"./output/{args.output_dir}/{filename}_implicit.xyz"
+    op_file = f"./output/{args.output_dir}/{filename}_op.xyz"
+
+    op_pc = torch.cat(op_pc, dim=0)
+    if args.marching_steps:
+        implicit_pc = torch.cat(implicit_pc, dim=0)
+
+    if args.marching_steps:
+        implicit_pc = implicit_pc.detach().cpu().detach().numpy()
+    op_pc = op_pc.detach().cpu().detach().numpy()
+
+    np.savetxt(output_file, output_pc, fmt="%.6f")
+    if args.marching_steps:
+        np.savetxt(implicit_file, implicit_pc, fmt="%.6f")
+    np.savetxt(op_file, op_pc, fmt="%.6f")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--input",
+        type=str,
+        help="Input point cloud file name",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        help="Name of the output file",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Model name",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=2048,
+        help="Batch size",
+    )
+    parser.add_argument(
+        "--patch-k",
+        type=int,
+        default=16,
+        help="Patch size",
+    )
+    parser.add_argument(
+        "--query-k",
+        type=int,
+        default=16,
+        help="Neighbourhood size for novel query sampling",
+    )
+    parser.add_argument(
+        "--r",
+        type=int,
+        default=16,
+        help="Upsampling rate",
+    )
+    parser.add_argument(
+        "--marching-steps",
+        type=int,
+        default=3,
+        help="Marching steps",
+    )
+    parser.add_argument(
+        "--implicit-points",
+        action="store_true",
+        help="Output implicit points",
+    )
+    parser.add_argument(
+        "--num-op",
+        type=int,
+        help="Number of observation points",
+    )
+    parser.add_argument(
+        "--real-scanned",
+        action="store_true",
+        help="Real scanned data adaptation",
+    )
+    parser.add_argument(
+        "--min-dist",
+        type=float,
+        help="Minimum distance to upsample (for real-scanned)",
+    )
+    parser.add_argument(
+        "--fps",
+        action="store_true",
+        help="Real scanned data adaptation",
+    )
+
+    args = parser.parse_args()
+
+    main(args)

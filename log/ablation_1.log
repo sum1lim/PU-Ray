@@ -1,0 +1,695 @@
+********************** Random seed: 2 **********************
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.039789429563869154 / RMSE: 0.05521447781820289
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.04097539667170322 / RMSE: 0.057155814518225746
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.039545338110543074 / RMSE: 0.055559184817504735
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03834799767834198 / RMSE: 0.054608056487525626
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.0380204078013976 / RMSE: 0.05399584982010265
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03815712605296636 / RMSE: 0.05343031310116402
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03848210423071117 / RMSE: 0.0542587340886793
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03675416040495141 / RMSE: 0.052580072338658176
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03380563942120376 / RMSE: 0.04861730857885327
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.034570804932694765 / RMSE: 0.051656368941593825
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03546627336644447 / RMSE: 0.0503031841386398
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.036597684225134416 / RMSE: 0.051673584358914185
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.0334415556684406 / RMSE: 0.047554293667962884
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03144663776922336 / RMSE: 0.045950388691649975
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03176566079242436 / RMSE: 0.04838643218840537
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03272758963697942 / RMSE: 0.047124560975304354
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03240556381694832 / RMSE: 0.04578147590941765
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.029996550710166537 / RMSE: 0.042912862033290235
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.02856854524239348 / RMSE: 0.04121967465152127
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.028726598801899275 / RMSE: 0.041900647588293614
+********************** Random seed: 8 **********************
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.04099358803644549 / RMSE: 0.05716174781845994
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.04234761728049006 / RMSE: 0.05875199986736247
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.04107545793243616 / RMSE: 0.05720507032576865
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.038117369167588976 / RMSE: 0.055623082064297176
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03960218912221918 / RMSE: 0.05656338170064294
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.0374229380018605 / RMSE: 0.05295508637086417
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03609268260860291 / RMSE: 0.051165737709520556
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03474215616301393 / RMSE: 0.0491501526177122
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03693287013017505 / RMSE: 0.05375246229358925
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03733950225759958 / RMSE: 0.05330625418757312
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03532008954197649 / RMSE: 0.05019029624021583
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03435618400168042 / RMSE: 0.04853698432198501
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03239491603877252 / RMSE: 0.04609567185451141
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03204346751693446 / RMSE: 0.04678438445038118
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03185180510609115 / RMSE: 0.046355056559417886
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03460999859145076 / RMSE: 0.04930547597113471
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.0324955860945691 / RMSE: 0.046561698185378524
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.029476313264354428 / RMSE: 0.04299948213418815
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.02971574164203908 / RMSE: 0.042554079183317384
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03594312822550763 / RMSE: 0.05091343017423734
+********************** Random seed: 32 **********************
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.040847654963285726 / RMSE: 0.056371675138906285
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.041296829710138996 / RMSE: 0.05753533884855425
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03833529555975642 / RMSE: 0.05431940660529721
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03991793305630314 / RMSE: 0.05593495554248481
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03894808049790331 / RMSE: 0.05516055387385532
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03823706493079985 / RMSE: 0.053570552087116405
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03935777239540181 / RMSE: 0.055243315290328714
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.034146417959649816 / RMSE: 0.048609162384863985
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03554526971858942 / RMSE: 0.050020142903343764
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.034954333479110485 / RMSE: 0.04970405885942229
+cuda
+Number of parameters: 38916
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.0346259905883382 / RMSE: 0.04909115274819456
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03477675642641194 / RMSE: 0.04969371741953132
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03238082024483074 / RMSE: 0.04596966645044434
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03170591145205881 / RMSE: 0.046162906546165144
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03139760629061379 / RMSE: 0.04590336008981223
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03264918558058965 / RMSE: 0.047071806962930195
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03255492301554135 / RMSE: 0.04624372756641823
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.029928083456195655 / RMSE: 0.04339497981591178
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.028203105159805737 / RMSE: 0.041445992885610766
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.028271530630178027 / RMSE: 0.041376361616173155
+********************** Random seed: 128 **********************
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.041063611397441954 / RMSE: 0.05686371955093641
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03988450705010948 / RMSE: 0.055797077010897575
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.038490287840326196 / RMSE: 0.05467174110783627
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03893670290779038 / RMSE: 0.05730619396952283
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_2048queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03736710919831897 / RMSE: 0.05559092360274014
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03739345287472391 / RMSE: 0.05262696518192157
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03835950577533055 / RMSE: 0.05371655650699839
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03576960755977831 / RMSE: 0.05090049327532869
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.034517929674666645 / RMSE: 0.05030131196166527
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_4096queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03430689256438226 / RMSE: 0.04958792971223198
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.0345189225594348 / RMSE: 0.049505788126948724
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.034243349121081505 / RMSE: 0.04872752861762551
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03271210597072124 / RMSE: 0.04675893799942081
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.031590081796164 / RMSE: 0.04537131301680702
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_8192queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.031641692972906456 / RMSE: 0.0464155097342314
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_0
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.03285912601618909 / RMSE: 0.04717260208546842
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_2
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.031304631986384064 / RMSE: 0.04430519223870775
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_4
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.029120642602402238 / RMSE: 0.04187836595109879
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_6
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.028192803006030435 / RMSE: 0.041049981634577876
+cuda
+120 point clouds in the dataset
+cuda
+Testing ablation1_16384queries_8
+27 point clouds in the dataset
+Number of test samples: 221184
+Number of parameters: 38916
+MAE: 0.028992497731063924 / RMSE: 0.042188705266850805

@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import torch
+import gc
+import time
+import torch.optim as optim
+import numpy as np
+from pu_ray.utils import TrainData, RayMarchingLoss
+from pu_ray.models import PUray
+from torch.utils.data import DataLoader
+from torch import nn
+
+
+def main(args):
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.empty_cache()
+    torch.autograd.set_detect_anomaly(True)
+    torch.multiprocessing.set_start_method("spawn")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    if args.verbose:
+        log_target = sys.stdout
+    else:
+        log_target = open(f"./log/{args.log}.log", "w")
+
+    # Load the model
+    model = nn.DataParallel(PUray(device=device, steps=args.marching_steps)).to(device)
+    print(
+        f"Number of parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}"
+    )
+
+    train_dataset = TrainData(
+        args.input_dir,
+        args.query_dir,
+        patch_k=args.patch_k,
+        device=device,
+        num_sample=args.num_sample,
+        num_query=args.num_query,
+        num_op=args.num_op,
+        seed=args.seed,
+    )
+    print(f"Number of training queries: {len(train_dataset)}", file=log_target)
+
+    # Train-validation split
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset, [0.8, 0.2]
+    )
+    # Data loader
+    data_loader = DataLoader(
+        train_dataset,
+        num_workers=0,
+        batch_size=args.num_query // 64,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    # Data loader
+    val_data_loader = DataLoader(
+        val_dataset,
+        num_workers=0,
+        batch_size=args.num_query // 64,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    if args.input_dir == args.query_dir:
+        ray_marching_loss = 0.5
+    else:
+        ray_marching_loss = 0.1
+
+    # Loss function
+    loss_function = RayMarchingLoss(
+        device,
+        steps=args.marching_steps,
+        batch_size=args.num_query // 64,
+        ray_marching_loss=ray_marching_loss,
+    ).to(device)
+
+    # Learning strategy
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
+    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-3)
+    scheduler = optim.lr_scheduler.ExponentialLR(
+        optimizer, 0.99, last_epoch=-1, verbose=False
+    )
+
+    best = np.inf
+    for epoch in range(args.num_epochs):
+        start_time = time.time()
+        # Training
+        errs = []
+        count = 0
+        train_loss = 0.0
+        for query, knn_coords, label in data_loader:
+            # Predict
+            (
+                knn_depths,
+                march_steps,
+                cossims,
+                tmp,
+                cumulative_depth,
+                epsilon,
+            ) = model(knn_coords, query)
+
+            output_depth = (cumulative_depth + epsilon).squeeze()
+
+            # Update
+            optimizer.zero_grad()
+            loss = loss_function(
+                knn_depths,
+                march_steps,
+                cossims,
+                epsilon,
+                output_depth,
+                label.to(device),
+            )
+            loss.backward()
+            optimizer.step()
+
+            # Error calcuation
+            train_loss += loss.detach().cpu() * output_depth.shape[0]
+            errs.append(output_depth.detach().cpu() - label.detach().cpu())
+            count += output_depth.shape[0]
+
+            # garbage collect
+            query = query.detach().cpu()
+            knn_coords = knn_coords.detach().cpu()
+            label = label.detach().cpu()
+            knn_depths = knn_depths.detach().cpu()
+            march_steps = march_steps.detach().cpu()
+            cossims = cossims.detach().cpu()
+            tmp = tmp.detach().cpu()
+            cumulative_depth = cumulative_depth.detach().cpu()
+            epsilon = epsilon.detach().cpu()
+            output_depth = output_depth.detach().cpu()
+            del (
+                query,
+                knn_coords,
+                label,
+                knn_depths,
+                march_steps,
+                cossims,
+                tmp,
+                cumulative_depth,
+                epsilon,
+                loss,
+                output_depth,
+            )
+            gc.collect()
+            torch.cuda.empty_cache()
+
+        scheduler.step()
+
+        errs = torch.cat(errs, 0)
+        outstr = f"Epoch {epoch}, Loss: {(train_loss / count)} / MAE: {torch.mean(torch.absolute(errs))} / RMSE: {torch.sqrt(torch.mean(torch.square(errs)))}"
+        print(outstr, file=log_target)
+
+        # Validation
+        val_errs = []
+        val_count = 0.0
+        val_loss = 0.0
+        for val_query, val_knn_coords, val_label in val_data_loader:
+            # Predict
+            (
+                val_knn_depths,
+                val_march_steps,
+                val_cossims,
+                val_tmp,
+                val_cumulative_depth,
+                val_epsilon,
+            ) = model(val_knn_coords, val_query.to(device))
+
+            val_depth = (val_cumulative_depth + val_epsilon).squeeze()
+
+            # Loss calcuation
+            loss = loss_function(
+                val_knn_depths,
+                val_march_steps,
+                val_cossims,
+                val_epsilon,
+                val_depth,
+                val_label.to(device),
+            )
+            val_loss += loss.detach().cpu() * val_cumulative_depth.shape[0]
+
+            # Error calculation
+            val_errs.append(val_depth.detach().cpu() - val_label.detach().cpu())
+            val_count += val_depth.shape[0]
+
+            # garbage collect
+            val_query = val_query.detach().cpu()
+            val_knn_coords = val_knn_coords.detach().cpu()
+            val_label = val_label.detach().cpu()
+            val_knn_depths = val_knn_depths.detach().cpu()
+            val_march_steps = val_march_steps.detach().cpu()
+            val_cossims = val_cossims.detach().cpu()
+            val_tmp = val_tmp.detach().cpu()
+            val_cumulative_depth = val_cumulative_depth.detach().cpu()
+            val_epsilon = val_epsilon.detach().cpu()
+            val_depth = val_depth.detach().cpu()
+            del (
+                val_query,
+                val_knn_coords,
+                val_label,
+                val_knn_depths,
+                val_march_steps,
+                val_cossims,
+                val_tmp,
+                val_cumulative_depth,
+                val_epsilon,
+                val_depth,
+                loss,
+            )
+            gc.collect()
+            torch.cuda.empty_cache()
+
+        val_errs = torch.cat(val_errs, 0)
+        outstr = f"Validation Loss: {val_loss / val_count} / MAE: {torch.mean(torch.absolute(val_errs))} / RMSE: {torch.sqrt(torch.mean(torch.square(val_errs)))}"
+        print(outstr, file=log_target)
+        print(f"Time: {time.time() - start_time}",file=log_target)
+
+        # Save the model
+        if torch.mean(torch.absolute(val_errs)) < best:
+            best = torch.mean(torch.absolute(val_errs))
+            print(f"Save model to ./models/{args.log}.pt", file=log_target)
+            torch.save(model.state_dict(), f"./models/{args.log}.pt")
+
+        log_target.flush()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--input-dir",
+        type=str,
+        help="Train data directory",
+    )
+    parser.add_argument(
+        "--query-dir",
+        type=str,
+        help="Query data directory",
+    )
+    parser.add_argument(
+        "--log",
+        type=str,
+        default="log",
+        help="log file name",
+    )
+    parser.add_argument(
+        "--patch-k",
+        type=int,
+        default=16,
+        help="Patch size",
+    )
+    parser.add_argument(
+        "--marching-steps",
+        type=int,
+        default=3,
+        help="Marching steps",
+    )
+    parser.add_argument(
+        "--num-sample",
+        type=int,
+        help="Number of training point clouds samples",
+    )
+    parser.add_argument(
+        "--num-query",
+        type=int,
+        default=2048,
+        help="Number of training query rays",
+    )
+    parser.add_argument(
+        "--num-op",
+        type=int,
+        help="Number of observation points",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print to stdout",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed",
+    )
+    parser.add_argument(
+        "--num-epochs",
+        type=int,
+        default=100,
+        help="Number of epochs",
+    )
+
+    args = parser.parse_args()
+
+    main(args)
