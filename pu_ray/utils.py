@@ -215,6 +215,7 @@ class UpsampleData(Dataset):
             output_size,
             real_scanned=real_scanned,
         )
+        print(query_pc.shape)
 
         query_pc = query_pc.double().to(self.device)
 
@@ -387,8 +388,8 @@ class UpsampleData(Dataset):
                     break
 
         else:
+            queries = []
             for point in target:
-                queries = []
                 rel_pos = reference - point.unsqueeze(0)
                 rel_dist = rel_pos.norm(dim=-1)
                 rel_vectors = rel_pos / rel_dist.unsqueeze(-1)
@@ -809,6 +810,7 @@ def evaluate(pc1, pc2, device="cpu"):
                         torch.norm(
                             pc2.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
                             - chunk.unsqueeze(1).repeat([1, pc2.shape[0], 1]),
+                            p=2,
                             dim=2,
                         ),
                         1,
@@ -831,6 +833,7 @@ def evaluate(pc1, pc2, device="cpu"):
                         torch.norm(
                             pc1.unsqueeze(0).repeat([chunk.shape[0], 1, 1])
                             - chunk.unsqueeze(1).repeat([1, pc1.shape[0], 1]),
+                            p=2,
                             dim=2,
                         ),
                         1,

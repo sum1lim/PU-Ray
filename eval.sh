@@ -9,6 +9,11 @@ rm ./log/kitti_mpu.log
 rm ./log/kitti_pugan.log
 rm ./log/kitti_pugcn.log
 rm ./log/kitti_gradpu.log
+rm ./log/kitti_train2test.log
+rm ./log/kitti_test2test.log
+rm ./log/kitti_simple2test.log
+rm ./log/kitti_medium2test.log
+rm ./log/kitti_complext2test.log
 
 for FILE in ./data/kitti_test/resolution_h0.200_v0.400_occ/*; do
     echo "******************** $(basename ${FILE%.*}) ********************"
@@ -20,6 +25,11 @@ for FILE in ./data/kitti_test/resolution_h0.200_v0.400_occ/*; do
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_pugcn/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_pugcn.log --wait  --min-dist 20000
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_gradpu/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_gradpu.log --wait  --min-dist 20000
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_puray/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_puray.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_train2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_train2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_test2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_test2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_simple2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_simple2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_medium2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_medium2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_complext2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_complext2test.log --wait  --min-dist 20000
 done
 
 rm ./log/highway_low_res.log
@@ -31,6 +41,11 @@ rm ./log/highway_mpu.log
 rm ./log/highway_pugan.log
 rm ./log/highway_pugcn.log
 rm ./log/highway_gradpu.log
+rm ./log/highway_train2test.log
+rm ./log/highway_test2test.log
+rm ./log/highway_simple2test.log
+rm ./log/highway_medium2test.log
+rm ./log/highway_complext2test.log
 
 for FILE in ./data/highway_test/resolution_h0.200_v0.400_occ/*; do
     echo "******************** $(basename ${FILE%.*}) ********************"
@@ -41,5 +56,10 @@ for FILE in ./data/highway_test/resolution_h0.200_v0.400_occ/*; do
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_pugan/"$(basename ${FILE%.*}).xyz" --log ./log/highway_pugan.log --wait --min-dist 30000
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_pugcn/"$(basename ${FILE%.*}).xyz" --log ./log/highway_pugcn.log --wait --min-dist 30000
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_gradpu/"$(basename ${FILE%.*}).xyz" --log ./log/highway_gradpu.log --wait --min-dist 30000
-    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_puray/"$(basename ${FILE%.*}).xyz" --log ./log/highway_puray.log --wait --min-dist 30000
+    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_puray/"$(basename ${FILE%.*}).xyz" --log ./log/highway_puray.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_train2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_train2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_test2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_test2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_simple2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_simple2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_medium2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_medium2test.log --wait  --min-dist 20000
+    evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_complext2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_complext2test.log --wait  --min-dist 20000
 done
