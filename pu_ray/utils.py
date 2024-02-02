@@ -215,7 +215,6 @@ class UpsampleData(Dataset):
             output_size,
             real_scanned=real_scanned,
         )
-        print(query_pc.shape)
 
         query_pc = query_pc.double().to(self.device)
 
