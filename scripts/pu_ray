@@ -2,6 +2,7 @@
 import argparse
 import os
 import time
+import math
 import torch
 import gc
 import pandas as pd
@@ -42,15 +43,21 @@ def main(args):
         dists = (df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2) ** (1 / 2)
         tan = df["y"] / df["x"]
         input_li = [
-            df[(dists > args.min_dist) & (tan.abs() < 1) & (df["x"] > 0)],
-            df[(dists > args.min_dist) & (tan.abs() < 1) & (df["x"] < 0)],
-            df[(dists > args.min_dist) & (tan.abs() > 1) & (df["y"] > 0)],
-            df[(dists > args.min_dist) & (tan.abs() > 1) & (df["y"] < 0)],
+            df[
+                (dists > args.min_dist) & (tan.abs() < 1 / math.sqrt(3)) & (df["x"] > 0)
+            ],
+            df[
+                (dists > args.min_dist) & (tan.abs() < 1 / math.sqrt(3)) & (df["x"] < 0)
+            ],
+            df[(dists > args.min_dist) & (tan > 1 / math.sqrt(3)) & (df["y"] > 0)],
+            df[(dists > args.min_dist) & (tan > 1 / math.sqrt(3)) & (df["y"] < 0)],
+            df[(dists > args.min_dist) & (tan < -1 / math.sqrt(3)) & (df["y"] > 0)],
+            df[(dists > args.min_dist) & (tan < -1 / math.sqrt(3)) & (df["y"] < 0)],
         ]
     else:
         input_li = [df]
 
-    original_pc = torch.tensor(df[["x", "y", "z"]].values).double()
+    # original_pc = torch.tensor(df[["x", "y", "z"]].values).double()
 
     total_time = time.time()
     inference_time = 0
@@ -58,8 +65,6 @@ def main(args):
     for input_df in input_li:
         updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
         num_points = 0
-        if len(input_df) > 14000:
-            input_df = farthest_point_sampling(input_df, 14000)
         while len(updating_pc) < len(input_df) * args.r:
             if len(updating_pc) == num_points:
                 break
