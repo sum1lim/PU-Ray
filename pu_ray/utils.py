@@ -390,11 +390,6 @@ class UpsampleData(Dataset):
                     mult *= 2
                     continue
 
-                if output_size > len(queries):
-                    mult += 1
-                else:
-                    break
-
         else:
             queries = []
             for point in target:
