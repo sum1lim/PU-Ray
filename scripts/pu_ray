@@ -39,6 +39,8 @@ def main(args):
     elif args.input.endswith(".csv"):
         df = pd.read_csv(args.input, sep=",", names=["x", "y", "z"])
 
+    input_len = len(df)
+
     if args.real_scanned:
         dists = (df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2) ** (1 / 2)
         tan = df["y"] / df["x"]
@@ -175,23 +177,17 @@ def main(args):
 
             garbage_collect(pc_data.__dict__.values())
 
-            # if args.real_scanned:
-            #     break
-
-        # output_pc = torch.cat(output_pc, dim=0)
-        output_pc = updating_pc.detach().cpu().detach().numpy()
-        output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
-        if args.fps and len(output_pc) > len(input_df) * args.r:
-            output_pc = farthest_point_sampling(output_pc, len(input_df) * args.r)[
-                ["x", "y", "z"]
-            ]
-
+        output_pc = updating_pc
         output_pc_li.append(output_pc)
 
     print(f"Inference time: {inference_time} sec")
     print(f"Total time: {time.time() - total_time} sec")
 
-    output_pc = pd.concat(output_pc_li, axis=0).values
+    output_pc = torch.cat(output_pc_li, 0)
+    output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
+    if args.fps and len(output_pc) > len(input_df) * args.r:
+        output_pc = farthest_point_sampling(output_pc, input_len * args.r)
+
     filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
 
     # Save point cloud
