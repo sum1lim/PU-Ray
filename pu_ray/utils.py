@@ -351,7 +351,7 @@ class UpsampleData(Dataset):
             # valid_dist_mean = torch.mean(knn_dists[valid_idx])
 
             try:
-                mult = output_size // len(target) + 1
+                mult = 2 * (output_size // len(target) + 1)
             except ZeroDivisionError:
                 raise IndexError
 
@@ -388,7 +388,7 @@ class UpsampleData(Dataset):
                 if len(queries) == 0:
                     raise IndexError
                 if len(queries) < output_size:
-                    mult *= 2
+                    mult += 1
                     continue
                 else:
                     break
