@@ -65,7 +65,8 @@ def main(args):
     for input_df in input_li:
         updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
         num_points = 0
-        while len(updating_pc) < len(input_df) * args.r:
+        output_size = len(input_df) * args.r
+        while len(updating_pc) < output_size:
             if len(updating_pc) == num_points:
                 break
             else:
@@ -80,7 +81,7 @@ def main(args):
                     updating_pc,
                     patch_k=args.patch_k,
                     query_k=args.query_k,
-                    output_size=len(input_df) * args.r,
+                    output_size=output_size,
                     device=device,
                     num_op=args.num_op,
                     real_scanned=args.real_scanned,
