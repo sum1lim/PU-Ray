@@ -354,6 +354,8 @@ class UpsampleData(Dataset):
                 mult = output_size // len(target) + 1
             except ZeroDivisionError:
                 raise IndexError
+
+            flag = True
             while True:
                 queries = torch.cat(
                     [
@@ -386,7 +388,8 @@ class UpsampleData(Dataset):
 
                 if len(queries) == 0:
                     raise IndexError
-                if len(queries) < output_size:
+                if len(queries) < output_size and flag:
+                    flag = False
                     mult *= 2
                     continue
                 else:
