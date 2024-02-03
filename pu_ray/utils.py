@@ -355,7 +355,6 @@ class UpsampleData(Dataset):
             except ZeroDivisionError:
                 raise IndexError
 
-            flag = True
             while True:
                 queries = torch.cat(
                     [
@@ -384,11 +383,7 @@ class UpsampleData(Dataset):
 
                 queries = torch.unique(queries, dim=0)
 
-                if flag:
-                    queries, _ = select_aoi_points(
-                        queries, reference, device, num_chunks=1
-                    )
-                    flag = False
+                queries, _ = select_aoi_points(queries, reference, device, num_chunks=1)
 
                 if len(queries) == 0:
                     raise IndexError
