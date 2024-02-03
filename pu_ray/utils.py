@@ -389,6 +389,8 @@ class UpsampleData(Dataset):
                 if len(queries) < output_size:
                     mult *= 2
                     continue
+                else:
+                    break
 
         else:
             queries = []
