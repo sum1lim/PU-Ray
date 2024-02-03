@@ -384,6 +384,8 @@ class UpsampleData(Dataset):
 
                 queries, _ = select_aoi_points(queries, reference, device, num_chunks=1)
 
+                if len(queries) == 0:
+                    raise IndexError
                 if len(queries) < output_size:
                     mult += 1
                     continue
