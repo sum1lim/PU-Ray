@@ -384,12 +384,15 @@ class UpsampleData(Dataset):
 
                 queries = torch.unique(queries, dim=0)
 
-                queries, _ = select_aoi_points(queries, reference, device, num_chunks=1)
+                if flag:
+                    queries, _ = select_aoi_points(
+                        queries, reference, device, num_chunks=1
+                    )
+                    flag = False
 
                 if len(queries) == 0:
                     raise IndexError
-                if len(queries) < output_size and flag:
-                    flag = False
+                if len(queries) < output_size:
                     mult *= 2
                     continue
                 else:
