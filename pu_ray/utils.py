@@ -387,7 +387,7 @@ class UpsampleData(Dataset):
                 if len(queries) == 0:
                     raise IndexError
                 if len(queries) < output_size:
-                    mult += 1
+                    mult *= 2
                     continue
 
                 if output_size > len(queries):
