@@ -39,8 +39,6 @@ def main(args):
     elif args.input.endswith(".csv"):
         df = pd.read_csv(args.input, sep=",", names=["x", "y", "z"])
 
-    input_len = len(df)
-
     if args.real_scanned:
         dists = (df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2) ** (1 / 2)
         tan = df["y"] / df["x"]
@@ -56,8 +54,10 @@ def main(args):
             df[(dists > args.min_dist) & (tan < -1 / math.sqrt(3)) & (df["y"] > 0)],
             df[(dists > args.min_dist) & (tan < -1 / math.sqrt(3)) & (df["y"] < 0)],
         ]
+        output_len = len(df[(dists > args.min_dist)]) * args.r
     else:
         input_li = [df]
+        output_len = len(df) * args.r
 
     # original_pc = torch.tensor(df[["x", "y", "z"]].values).double()
 
@@ -186,7 +186,7 @@ def main(args):
     output_pc = torch.cat(output_pc_li, 0)
     output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
     if args.fps and len(output_pc) > len(input_df) * args.r:
-        output_pc = farthest_point_sampling(output_pc, input_len * args.r)
+        output_pc = farthest_point_sampling(output_pc, output_len)
 
     filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
 
