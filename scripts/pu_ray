@@ -61,6 +61,7 @@ def main(args):
 
     # original_pc = torch.tensor(df[["x", "y", "z"]].values).double()
 
+    # START OF UPSAMPLING
     total_time = time.time()
     inference_time = 0
     output_pc_li = []
@@ -180,12 +181,15 @@ def main(args):
         output_pc = updating_pc
         output_pc_li.append(output_pc)
 
+    # END OF UPSAMPLING
+
     print(f"Inference time: {inference_time} sec")
     print(f"Total time: {time.time() - total_time} sec")
 
     output_pc = torch.cat(output_pc_li, 0)
     output_pc = pd.DataFrame(output_pc, columns=["x", "y", "z"])
     if args.fps and len(output_pc) > len(input_df) * args.r:
+        # FPS downsampling if needed after PU-Ray upsampling
         output_pc = farthest_point_sampling(output_pc, output_len)
 
     filename = ".".join(args.input.split("/")[-1].split(".")[:-1])
