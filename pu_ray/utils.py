@@ -197,7 +197,13 @@ class UpsampleData(Dataset):
         output_size,
         num_op=None,
         real_scanned=False,
+        seed=0,
     ):
+        # Reproducibility
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+
         self.device = device
         self.patch_k = patch_k
 
@@ -242,6 +248,7 @@ class UpsampleData(Dataset):
             include_nearest=True,
             cossim=False,
             device=self.device,
+            num_chunks=1,
         )
         step = (knn_coords.shape[1]) // 16
         if step < 1:
@@ -383,7 +390,9 @@ class UpsampleData(Dataset):
 
                 queries = torch.unique(queries, dim=0)
 
-                queries, _ = select_aoi_points(queries, reference, device, num_chunks=1)
+                queries, _ = select_aoi_points(
+                    queries, reference, device, num_chunks=1
+                )
 
                 if len(queries) == 0:
                     raise IndexError
