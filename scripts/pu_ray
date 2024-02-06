@@ -158,8 +158,6 @@ def main(args):
 
                 count += output_coords.shape[0]
 
-            garbage_collect(pc_data.__dict__.values())
-
         output_pc = updating_pc
         output_pc_li.append(output_pc)
 
