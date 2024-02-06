@@ -659,7 +659,7 @@ def covariance(
     else:
         mean = target.unsqueeze(1)
 
-    torch.cuda.empty_cache()
+    # torch.cuda.empty_cache()
 
     cov = (
         torch.matmul(
