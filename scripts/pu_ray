@@ -13,7 +13,6 @@ from pu_ray.utils import (
     UpsampleData,
     load_model,
     farthest_point_sampling,
-    garbage_collect,
     select_aoi_points,
 )
 from pu_ray.models import PUray
@@ -30,7 +29,6 @@ def main(args):
 
     model = load_model(args.model, PUray, device, args.marching_steps)
 
-    count = 0
     implicit_pc = []
     op_pc = []
 
@@ -153,8 +151,6 @@ def main(args):
 
                     op_pc.append(op_pos)
                     implicit_pc.append(torch.cat([implicit_points], dim=0))
-
-                count += output_coords.shape[0]
 
         output_pc = updating_pc
         output_pc_li.append(output_pc)

@@ -157,18 +157,6 @@ class TrainData(Dataset):
         self.knn_coords = self.knn_coords[indices]
         self.labels = self.labels[indices]
 
-        garbage_collect(
-            [
-                input_pc,
-                query_pc,
-                op,
-                knn_coords,
-                knn_depths,
-                labels,
-                query_vectors,
-            ]
-        )
-
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
@@ -275,18 +263,6 @@ class UpsampleData(Dataset):
         self.knn_coords = knn_coords / self.scaling_factor
         self.query_vectors = query_vectors
 
-        garbage_collect(
-            [
-                input_pc,
-                query_pc,
-                op,
-                knn_coords,
-                knn_depths,
-                query_depths,
-                query_vectors,
-            ]
-        )
-
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
@@ -390,9 +366,7 @@ class UpsampleData(Dataset):
 
                 queries = torch.unique(queries, dim=0)
 
-                queries, _ = select_aoi_points(
-                    queries, reference, device, num_chunks=1
-                )
+                queries, _ = select_aoi_points(queries, reference, device, num_chunks=1)
 
                 if len(queries) == 0:
                     raise IndexError
@@ -428,8 +402,6 @@ class UpsampleData(Dataset):
                 ][:6]
 
             queries = torch.cat(queries, 0)
-
-        garbage_collect([target, reference])
 
         if real_scanned:
             query_pc = queries
@@ -695,9 +667,6 @@ def covariance(
         / k
     )
 
-    gc.collect()
-    torch.cuda.empty_cache()
-
     return cov, mean.squeeze()
 
 
@@ -917,15 +886,3 @@ def select_aoi_points(self_pc, aoi_pc, device, num_chunks=1):
     gt_points = self_pc[valid_idx]
 
     return gt_points, valid_idx
-
-
-def garbage_collect(items):
-    for item in items:
-        try:
-            item.detach().cpu()
-            del item
-        except AttributeError:
-            continue
-
-    gc.collect()
-    torch.cuda.empty_cache()
