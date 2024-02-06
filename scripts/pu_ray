@@ -100,62 +100,79 @@ def main(args):
 
             print(f"Number of queries: {len(pc_data)}")
 
-            # Data loader
-            data_loader = DataLoader(
-                pc_data,
-                num_workers=0,
-                batch_size=args.batch_size,
-                shuffle=True,
-                drop_last=False,
-            )
-
-            for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
-                # Predict
-                start_time = time.time()
-                (_, _, _, implicit_points, cumulative_depth, epsilon) = model(
-                    knn_coords,
-                    query.to(device),
-                    return_implicit_points=args.implicit_points,
+            while True:
+                memory_err = False
+                # Data loader
+                data_loader = DataLoader(
+                    pc_data,
+                    num_workers=0,
+                    batch_size=args.batch_size,
+                    shuffle=True,
+                    drop_last=False,
                 )
-                output_coords = query * (cumulative_depth + epsilon)
-                # Record inference time
-                inference_time += time.time() - start_time
 
-                output_coords = output_coords * scaling_factor.squeeze(1)
-                output_coords += op_pos
-                if args.real_scanned:
-                    output_coords, valid_idx = select_aoi_points(
-                        output_coords, input_pc, device, num_chunks=1
+                for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
+                    # Predict
+                    try:
+                        start_time = time.time()
+                        (_, _, _, implicit_points, cumulative_depth, epsilon) = model(
+                            knn_coords,
+                            query.to(device),
+                            return_implicit_points=args.implicit_points,
+                        )
+                        output_coords = query * (cumulative_depth + epsilon)
+                        # Record inference time
+                        inference_time += time.time() - start_time
+                    except torch.cuda.OutOfMemoryError:
+                        memory_err = True
+                        print(
+                            f"Batch size too big. Reducing from {args.batch_size} to {args.batch_size // 5 * 4}"
+                        )
+                        args.batch_size = args.batch_size // 5 * 4
+                        break
+
+                    output_coords = output_coords * scaling_factor.squeeze(1)
+                    output_coords += op_pos
+                    if args.real_scanned:
+                        output_coords, valid_idx = select_aoi_points(
+                            output_coords, input_pc, device, num_chunks=1
+                        )
+                    else:
+                        valid_idx = None
+
+                    updating_pc = torch.cat(
+                        [updating_pc.detach().cpu(), output_coords.detach().cpu()],
+                        dim=0,
                     )
+
+                    if args.marching_steps and args.implicit_points:
+                        step_idx = (
+                            torch.arange(1, args.marching_steps + 1)
+                            .unsqueeze(0)
+                            .unsqueeze(2)
+                            .repeat(query.shape[0], 1, 1)
+                        )
+
+                        op_pos = op_pos.detach().cpu()
+                        if valid_idx != None:
+                            valid_idx = valid_idx.detach().cpu()
+                            op_pos = op_pos[valid_idx]
+                            implicit_points = implicit_points[valid_idx]
+                            step_idx = step_idx[valid_idx]
+                            scaling_factor = scaling_factor[valid_idx]
+                        implicit_points = (
+                            (implicit_points * scaling_factor).detach().cpu()
+                        )
+                        implicit_points += op_pos.unsqueeze(1)
+                        implicit_points = torch.cat((implicit_points, step_idx), 2)
+                        implicit_points = torch.flatten(implicit_points, 0, 1)
+
+                        op_pc.append(op_pos)
+                        implicit_pc.append(torch.cat([implicit_points], dim=0))
+                if memory_err:
+                    continue
                 else:
-                    valid_idx = None
-
-                updating_pc = torch.cat(
-                    [updating_pc.detach().cpu(), output_coords.detach().cpu()], dim=0
-                )
-
-                if args.marching_steps and args.implicit_points:
-                    step_idx = (
-                        torch.arange(1, args.marching_steps + 1)
-                        .unsqueeze(0)
-                        .unsqueeze(2)
-                        .repeat(query.shape[0], 1, 1)
-                    )
-
-                    op_pos = op_pos.detach().cpu()
-                    if valid_idx != None:
-                        valid_idx = valid_idx.detach().cpu()
-                        op_pos = op_pos[valid_idx]
-                        implicit_points = implicit_points[valid_idx]
-                        step_idx = step_idx[valid_idx]
-                        scaling_factor = scaling_factor[valid_idx]
-                    implicit_points = (implicit_points * scaling_factor).detach().cpu()
-                    implicit_points += op_pos.unsqueeze(1)
-                    implicit_points = torch.cat((implicit_points, step_idx), 2)
-                    implicit_points = torch.flatten(implicit_points, 0, 1)
-
-                    op_pc.append(op_pos)
-                    implicit_pc.append(torch.cat([implicit_points], dim=0))
+                    break
 
         output_pc = updating_pc
         output_pc_li.append(output_pc)
