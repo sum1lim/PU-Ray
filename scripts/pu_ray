@@ -110,14 +110,6 @@ def main(args):
             )
 
             for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
-                if args.marching_steps:
-                    step_idx = (
-                        torch.arange(1, args.marching_steps + 1)
-                        .unsqueeze(0)
-                        .unsqueeze(2)
-                        .repeat(query.shape[0], 1, 1)
-                    )
-
                 # Predict
                 start_time = time.time()
                 (tmp1, tmp2, tmp3, implicit_points, cumulative_depth, epsilon) = model(
@@ -138,9 +130,6 @@ def main(args):
                         output_coords, input_pc, device, num_chunks=1
                     )
                     output_coords = output_coords.detach().cpu()
-                    valid_idx = valid_idx.detach().cpu()
-                    scaling_factor = scaling_factor[valid_idx]
-                    step_idx = step_idx[valid_idx.detach().cpu()]
                 else:
                     valid_idx = None
 
@@ -149,9 +138,19 @@ def main(args):
                 )
 
                 if args.marching_steps and args.implicit_points:
+                    step_idx = (
+                        torch.arange(1, args.marching_steps + 1)
+                        .unsqueeze(0)
+                        .unsqueeze(2)
+                        .repeat(query.shape[0], 1, 1)
+                    )
+
                     if valid_idx != None:
+                        valid_idx = valid_idx.detach().cpu()
                         op_pos = op_pos[valid_idx]
                         implicit_points = implicit_points[valid_idx]
+                        step_idx = step_idx[valid_idx]
+                        scaling_factor = scaling_factor[valid_idx]
                     implicit_points = (implicit_points * scaling_factor).detach().cpu()
                     implicit_points += op_pos.unsqueeze(1)
                     implicit_points = torch.cat((implicit_points, step_idx), 2)
