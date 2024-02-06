@@ -582,7 +582,7 @@ def KNN(
     return torch.cat(knn_li, 0), torch.cat(topk_idx_li, 0)
 
 
-def farthest_point_sampling(pc, num_sample, device="cuda"):
+def farthest_point_sampling(pc, num_sample, device="cpu"):
     # Farthest point sampling using implementation by
     #  @article{open3d,
     #    author  = {Qian-Yi Zhou and Jaesik Park and Vladlen Koltun},
