@@ -119,22 +119,17 @@ def main(args):
                 # Record inference time
                 inference_time += time.time() - start_time
 
-                op_pos = op_pos.detach().cpu()
-
-                output_coords = (
-                    (output_coords * scaling_factor.squeeze(1)).detach().cpu()
-                )
+                output_coords = output_coords * scaling_factor.squeeze(1)
                 output_coords += op_pos
                 if args.real_scanned:
                     output_coords, valid_idx = select_aoi_points(
                         output_coords, input_pc, device, num_chunks=1
                     )
-                    output_coords = output_coords.detach().cpu()
                 else:
                     valid_idx = None
 
                 updating_pc = torch.cat(
-                    [updating_pc.detach().cpu(), output_coords], dim=0
+                    [updating_pc.detach().cpu(), output_coords.detach().cpu()], dim=0
                 )
 
                 if args.marching_steps and args.implicit_points:
@@ -147,7 +142,7 @@ def main(args):
 
                     if valid_idx != None:
                         valid_idx = valid_idx.detach().cpu()
-                        op_pos = op_pos[valid_idx]
+                        op_pos = op_pos.detach().cpu()[valid_idx]
                         implicit_points = implicit_points[valid_idx]
                         step_idx = step_idx[valid_idx]
                         scaling_factor = scaling_factor[valid_idx]
