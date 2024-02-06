@@ -128,7 +128,6 @@ def main(args):
                 inference_time += time.time() - start_time
 
                 op_pos = op_pos.detach().cpu()
-                op_pc.append(op_pos)
 
                 output_coords = (
                     (output_coords * scaling_factor.squeeze(1)).detach().cpu()
@@ -141,19 +140,24 @@ def main(args):
                     output_coords = output_coords.detach().cpu()
                     valid_idx = valid_idx.detach().cpu()
                     scaling_factor = scaling_factor[valid_idx]
-                    implicit_points = implicit_points[valid_idx]
-                    op_pos = op_pos[valid_idx]
                     step_idx = step_idx[valid_idx.detach().cpu()]
+                else:
+                    valid_idx = None
 
                 updating_pc = torch.cat(
                     [updating_pc.detach().cpu(), output_coords], dim=0
                 )
 
-                if args.marching_steps:
+                if args.marching_steps and args.implicit_points:
+                    if valid_idx != None:
+                        op_pos = op_pos[valid_idx]
+                        implicit_points = implicit_points[valid_idx]
                     implicit_points = (implicit_points * scaling_factor).detach().cpu()
                     implicit_points += op_pos.unsqueeze(1)
                     implicit_points = torch.cat((implicit_points, step_idx), 2)
                     implicit_points = torch.flatten(implicit_points, 0, 1)
+
+                    op_pc.append(op_pos)
                     implicit_pc.append(torch.cat([implicit_points], dim=0))
 
                 count += output_coords.shape[0]
@@ -183,18 +187,13 @@ def main(args):
     implicit_file = f"./output/{args.output_dir}/{filename}_implicit.xyz"
     op_file = f"./output/{args.output_dir}/{filename}_op.xyz"
 
-    op_pc = torch.cat(op_pc, dim=0)
-    if args.marching_steps:
-        implicit_pc = torch.cat(implicit_pc, dim=0)
-
-    if args.marching_steps:
-        implicit_pc = implicit_pc.detach().cpu().numpy()
-    op_pc = op_pc.detach().cpu().detach().numpy()
-
     np.savetxt(output_file, output_pc, fmt="%.6f")
-    if args.marching_steps:
+
+    if args.marching_steps and args.implicit_points:
+        op_pc = torch.cat(op_pc, dim=0).detach().cpu().numpy()
+        implicit_pc = torch.cat(implicit_pc, dim=0).detach().cpu().numpy()
+        np.savetxt(op_file, op_pc, fmt="%.6f")
         np.savetxt(implicit_file, implicit_pc, fmt="%.6f")
-    np.savetxt(op_file, op_pc, fmt="%.6f")
 
 
 if __name__ == "__main__":
