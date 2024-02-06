@@ -51,10 +51,10 @@ def main(args):
     for query, knn_coords, label in tqdm(data_loader):
         # Predict
         (
-            tmp1,
-            tmp2,
-            tmp3,
-            tmp4,
+            _,
+            _,
+            _,
+            _,
             cumulative_depth,
             epsilon,
         ) = model(knn_coords, query)

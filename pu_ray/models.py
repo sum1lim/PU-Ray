@@ -196,7 +196,7 @@ class PUray(nn.Module):
             cossim,
         )
 
-    def forward(self, knn_coords, query):
+    def forward(self, knn_coords, query, train=False, return_implicit_points=False):
         KNN_depths = knn_coords.norm(dim=-1)
         KNN_vectors = knn_coords / KNN_depths.unsqueeze(-1)
 
@@ -231,12 +231,14 @@ class PUray(nn.Module):
             )
 
             # Update variables
-            local_depths = torch.cat([local_depths, rel_depths.unsqueeze(1)], 1)
-            march_steps = torch.cat([march_steps, march_step.unsqueeze(1)], 1)
-            cossims = torch.cat([cossims, cossim.unsqueeze(1)], 1)
-            implicit_points = torch.cat(
-                [implicit_points, implicit_point.unsqueeze(1)], 1
-            )
+            if train:
+                local_depths = torch.cat([local_depths, rel_depths.unsqueeze(1)], 1)
+                march_steps = torch.cat([march_steps, march_step.unsqueeze(1)], 1)
+                cossims = torch.cat([cossims, cossim.unsqueeze(1)], 1)
+            if return_implicit_points:
+                implicit_points = torch.cat(
+                    [implicit_points, implicit_point.unsqueeze(1)], 1
+                )
 
             # Update cumulative depth
             cumulative_depth = cumulative_depth + march_step

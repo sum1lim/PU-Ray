@@ -98,10 +98,10 @@ def main(args):
                 knn_depths,
                 march_steps,
                 cossims,
-                tmp,
+                _,
                 cumulative_depth,
                 epsilon,
-            ) = model(knn_coords, query)
+            ) = model(knn_coords, query, train=True)
 
             output_depth = (cumulative_depth + epsilon).squeeze()
 
@@ -130,7 +130,6 @@ def main(args):
             knn_depths = knn_depths.detach().cpu()
             march_steps = march_steps.detach().cpu()
             cossims = cossims.detach().cpu()
-            tmp = tmp.detach().cpu()
             cumulative_depth = cumulative_depth.detach().cpu()
             epsilon = epsilon.detach().cpu()
             output_depth = output_depth.detach().cpu()
@@ -141,7 +140,6 @@ def main(args):
                 knn_depths,
                 march_steps,
                 cossims,
-                tmp,
                 cumulative_depth,
                 epsilon,
                 loss,
@@ -166,10 +164,10 @@ def main(args):
                 val_knn_depths,
                 val_march_steps,
                 val_cossims,
-                val_tmp,
+                _,
                 val_cumulative_depth,
                 val_epsilon,
-            ) = model(val_knn_coords, val_query.to(device))
+            ) = model(val_knn_coords, val_query.to(device), train=True)
 
             val_depth = (val_cumulative_depth + val_epsilon).squeeze()
 
@@ -195,7 +193,6 @@ def main(args):
             val_knn_depths = val_knn_depths.detach().cpu()
             val_march_steps = val_march_steps.detach().cpu()
             val_cossims = val_cossims.detach().cpu()
-            val_tmp = val_tmp.detach().cpu()
             val_cumulative_depth = val_cumulative_depth.detach().cpu()
             val_epsilon = val_epsilon.detach().cpu()
             val_depth = val_depth.detach().cpu()
@@ -206,7 +203,6 @@ def main(args):
                 val_knn_depths,
                 val_march_steps,
                 val_cossims,
-                val_tmp,
                 val_cumulative_depth,
                 val_epsilon,
                 val_depth,
@@ -218,7 +214,7 @@ def main(args):
         val_errs = torch.cat(val_errs, 0)
         outstr = f"Validation Loss: {val_loss / val_count} / MAE: {torch.mean(torch.absolute(val_errs))} / RMSE: {torch.sqrt(torch.mean(torch.square(val_errs)))}"
         print(outstr, file=log_target)
-        print(f"Time: {time.time() - start_time}",file=log_target)
+        print(f"Time: {time.time() - start_time}", file=log_target)
 
         # Save the model
         if torch.mean(torch.absolute(val_errs)) < best:

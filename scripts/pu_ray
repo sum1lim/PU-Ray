@@ -110,8 +110,10 @@ def main(args):
             for query, knn_coords, op_pos, scaling_factor in tqdm(data_loader):
                 # Predict
                 start_time = time.time()
-                (tmp1, tmp2, tmp3, implicit_points, cumulative_depth, epsilon) = model(
-                    knn_coords, query.to(device)
+                (_, _, _, implicit_points, cumulative_depth, epsilon) = model(
+                    knn_coords,
+                    query.to(device),
+                    return_implicit_points=args.implicit_points,
                 )
                 output_coords = query * (cumulative_depth + epsilon)
                 # Record inference time
