@@ -1,8 +1,8 @@
 #!/bin/bash
 
-for FILE in ./data/kitti_snippet/*; do
-    pu_ray --input "$FILE" --r 4  --patch-k 64 --query-k 8 --marching-steps 6 --model puray_supervised --output-dir kitti-snippet --real-scanned --min-dist 0 --fps --implicit-points
-done
+# for FILE in ./data/kitti_snippet/*; do
+#     pu_ray --input "$FILE" --r 4  --patch-k 64 --query-k 8 --marching-steps 6 --model puray_supervised --output-dir kitti-snippet --real-scanned --min-dist 0 --fps --implicit-points
+# done
 
 generate_gt --aoi ./data/kitti_test/resolution_h0.200_v0.400_occ --reference ./data/kitti_test/reference --min-dist 15000
 rm ./log/kitti_puray.log
@@ -23,7 +23,7 @@ for FILE in ./data/kitti_test/resolution_h0.200_v0.400_occ/*; do
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_test2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_test2test.log --wait  --min-dist 15000
     pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_simple2test --output-dir kitti_simple2test --real-scanned --min-dist 15000 --fps
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_simple2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_simple2test.log --wait  --min-dist 15000
-    pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_med2test --output-dir kitti_medium2test --real-scanned --min-dist 15000 --fps
+    pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_medium2test --output-dir kitti_medium2test --real-scanned --min-dist 15000 --fps
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_medium2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_medium2test.log --wait  --min-dist 15000
     pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_complex2test --output-dir kitti_complext2test --real-scanned --min-dist 15000 --fps
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_complext2test/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_complext2test.log --wait  --min-dist 15000
@@ -47,7 +47,7 @@ for FILE in ./data/highway_test/resolution_h0.200_v0.400_occ/*; do
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_test2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_test2test.log --wait --min-dist 30000
     pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_simple2test --output-dir highway_simple2test --real-scanned --min-dist 30000 --fps
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_simple2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_simple2test.log --wait --min-dist 30000
-    pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_med2test --output-dir highway_medium2test --real-scanned --min-dist 30000 --fps
+    pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_medium2test --output-dir highway_medium2test --real-scanned --min-dist 30000 --fps
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_medium2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_medium2test.log --wait --min-dist 30000
     pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_complex2test --output-dir highway_complext2test --real-scanned --min-dist 30000 --fps
     evaluate --pc1 ./data/highway_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/highway_complext2test/"$(basename ${FILE%.*}).xyz" --log ./log/highway_complext2test.log --wait --min-dist 30000
