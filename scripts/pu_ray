@@ -158,24 +158,6 @@ def main(args):
 
                 count += output_coords.shape[0]
 
-                query.detach().cpu()
-                knn_coords.detach().cpu()
-                scaling_factor.detach().cpu()
-                del (
-                    query,
-                    knn_coords,
-                    scaling_factor,
-                    output_coords,
-                    implicit_points,
-                    cumulative_depth,
-                    op_pos,
-                    tmp1,
-                    tmp2,
-                    tmp3,
-                )
-                gc.collect()
-                torch.cuda.empty_cache()
-
             garbage_collect(pc_data.__dict__.values())
 
         output_pc = updating_pc
@@ -208,7 +190,7 @@ def main(args):
         implicit_pc = torch.cat(implicit_pc, dim=0)
 
     if args.marching_steps:
-        implicit_pc = implicit_pc.detach().cpu().detach().numpy()
+        implicit_pc = implicit_pc.detach().cpu().numpy()
     op_pc = op_pc.detach().cpu().detach().numpy()
 
     np.savetxt(output_file, output_pc, fmt="%.6f")
