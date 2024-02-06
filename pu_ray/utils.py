@@ -659,6 +659,8 @@ def covariance(
     else:
         mean = target.unsqueeze(1)
 
+    torch.cuda.empty_cache()
+
     cov = (
         torch.matmul(
             (reference[knn_indices] - mean).transpose(-2, -1),
