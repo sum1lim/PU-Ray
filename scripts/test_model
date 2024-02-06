@@ -11,6 +11,7 @@ from collections import OrderedDict
 
 
 def main(args):
+    torch.cuda.manual_seed(args.seed)
     torch.cuda.empty_cache()
     torch.autograd.set_detect_anomaly(True)
     torch.multiprocessing.set_start_method("spawn")
@@ -31,6 +32,7 @@ def main(args):
         device=device,
         num_query=args.num_query,
         num_op=args.num_op,
+        seed=args.seed,
     )
 
     print(f"Number of test samples: {len(pc_data)}", file=log_target)
@@ -115,6 +117,12 @@ if __name__ == "__main__":
         "--verbose",
         action="store_true",
         help="Print to stdout",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed",
     )
 
     args = parser.parse_args()

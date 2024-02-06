@@ -20,6 +20,7 @@ from torch.utils.data import DataLoader
 
 
 def main(args):
+    torch.cuda.manual_seed(args.seed)
     torch.cuda.empty_cache()
     torch.autograd.set_detect_anomaly(True)
     torch.multiprocessing.set_start_method("spawn")
@@ -86,6 +87,7 @@ def main(args):
                     device=device,
                     num_op=args.num_op,
                     real_scanned=args.real_scanned,
+                    seed=args.seed,
                 )
             except IndexError:
                 print("Not enough points in the point cloud")
@@ -140,9 +142,10 @@ def main(args):
                         .repeat(query.shape[0], 1, 1)
                     )
 
+                    op_pos = op_pos.detach().cpu()
                     if valid_idx != None:
                         valid_idx = valid_idx.detach().cpu()
-                        op_pos = op_pos.detach().cpu()[valid_idx]
+                        op_pos = op_pos[valid_idx]
                         implicit_points = implicit_points[valid_idx]
                         step_idx = step_idx[valid_idx]
                         scaling_factor = scaling_factor[valid_idx]
@@ -260,6 +263,12 @@ if __name__ == "__main__":
         "--fps",
         action="store_true",
         help="Real scanned data adaptation",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed",
     )
 
     args = parser.parse_args()
