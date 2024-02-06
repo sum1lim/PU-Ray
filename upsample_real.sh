@@ -14,7 +14,6 @@ rm ./log/kitti_complext2test.log
 
 for FILE in ./data/kitti_test/resolution_h0.200_v0.400_occ/*; do
     echo "******************** $(basename ${FILE%.*}) ********************"
-    start=`date +%s.%N`
     pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_supervised --output-dir kitti_puray --real-scanned --min-dist 15000 --fps
     evaluate --pc1 ./data/kitti_test/resolution_h0.200_v0.400_occ_gt/"$(basename ${FILE%.*}).csv" --pc2 ./output/kitti_puray/"$(basename ${FILE%.*}).xyz" --log ./log/kitti_puray.log --wait  --min-dist 15000
     pu_ray --input "$FILE" --r 4  --batch-size 2500 --patch-k 64 --query-k 8 --marching-steps 6 --model puray_train2test --output-dir kitti_train2test --real-scanned --min-dist 15000 --fps
