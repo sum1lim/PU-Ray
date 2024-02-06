@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# for FILE in ./data/kitti_snippet/*; do
-#     pu_ray --input "$FILE" --r 4  --patch-k 64 --query-k 8 --marching-steps 6 --model puray_supervised --output-dir kitti-snippet --real-scanned --min-dist 0 --fps --implicit-points
-# done
+for FILE in ./data/kitti_snippet/*; do
+    pu_ray --input "$FILE" --r 4  --patch-k 64 --query-k 8 --marching-steps 6 --model puray_supervised --output-dir kitti-snippet --real-scanned --min-dist 0 --fps --implicit-points
+done
 
 generate_gt --aoi ./data/kitti_test/resolution_h0.200_v0.400_occ --reference ./data/kitti_test/reference --min-dist 15000
 rm ./log/kitti_puray.log
