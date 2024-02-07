@@ -66,10 +66,10 @@ def main(args):
     output_pc_li = []
     for input_df in input_li:
         if len(input_df) > 10000:
-            print("Reducing input size")
-            print(f"Before: {len(input_df)}")
+            print(
+                f"Input size too big. Reducing from {len(input_df)} to {int(len(input_df) * 0.9)}"
+            )
             input_df = farthest_point_sampling(input_df, int(len(input_df) * 0.9))
-            print(f"After: {len(input_df)}")
 
         updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
         num_points = 0
@@ -99,10 +99,10 @@ def main(args):
                 print("Not enough points in the point cloud")
                 break
             except RuntimeError:
-                print("Reducing input size")
-                print(f"Before: {len(input_df)}")
+                print(
+                    f"Input size too big. Reducing from {len(input_df)} to {int(len(input_df) * 0.9)}"
+                )
                 input_df = farthest_point_sampling(input_df, int(len(input_df) * 0.9))
-                print(f"After: {len(input_df)}")
 
             print(f"Number of queries: {len(pc_data)}")
 
