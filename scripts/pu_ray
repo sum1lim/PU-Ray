@@ -67,8 +67,9 @@ def main(args):
     for input_df in input_li:
         if len(input_df) > 10000:
             print("Reducing input size")
-            print(f"Before {len(input_df)}")
+            print(f"Before: {len(input_df)}")
             input_df = farthest_point_sampling(input_df, int(len(input_df) * 0.9))
+            print(f"After: {len(input_df)}")
 
         updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
         num_points = 0
@@ -99,9 +100,9 @@ def main(args):
                 break
             except RuntimeError:
                 print("Reducing input size")
-                print(f"Before {len(input_df)}")
+                print(f"Before: {len(input_df)}")
                 input_df = farthest_point_sampling(input_df, int(len(input_df) * 0.9))
-                print(f"After {len(input_df)}")
+                print(f"After: {len(input_df)}")
 
             print(f"Number of queries: {len(pc_data)}")
 
