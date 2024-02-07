@@ -6,6 +6,7 @@ import gc
 import time
 import torch.optim as optim
 import numpy as np
+from tqdm import tqdm
 from pu_ray.utils import TrainData, RayMarchingLoss
 from pu_ray.models import PUray
 from torch.utils.data import DataLoader
@@ -47,11 +48,17 @@ def main(args):
     train_dataset, val_dataset = torch.utils.data.random_split(
         train_dataset, [0.8, 0.2]
     )
+
+    if args.num_query // 64 > 5000:
+        batch_size = 5000
+    else:
+        batch_size = args.num_query // 64
+
     # Data loader
     data_loader = DataLoader(
         train_dataset,
         num_workers=0,
-        batch_size=args.num_query // 64,
+        batch_size=batch_size,
         shuffle=True,
         drop_last=True,
     )
@@ -60,7 +67,7 @@ def main(args):
     val_data_loader = DataLoader(
         val_dataset,
         num_workers=0,
-        batch_size=args.num_query // 64,
+        batch_size=batch_size,
         shuffle=True,
         drop_last=True,
     )
@@ -74,7 +81,7 @@ def main(args):
     loss_function = RayMarchingLoss(
         device,
         steps=args.marching_steps,
-        batch_size=args.num_query // 64,
+        batch_size=batch_size,
         ray_marching_loss=ray_marching_loss,
     ).to(device)
 
@@ -88,11 +95,14 @@ def main(args):
     best = np.inf
     for epoch in range(args.num_epochs):
         start_time = time.time()
+
         # Training
         errs = []
         count = 0
         train_loss = 0.0
-        for query, knn_coords, label in data_loader:
+        for idx, (query, knn_coords, label) in enumerate(data_loader):
+            if idx >= 64 * 0.8:
+                break
             # Predict
             (
                 knn_depths,
@@ -123,31 +133,6 @@ def main(args):
             errs.append(output_depth.detach().cpu() - label.detach().cpu())
             count += output_depth.shape[0]
 
-            # garbage collect
-            query = query.detach().cpu()
-            knn_coords = knn_coords.detach().cpu()
-            label = label.detach().cpu()
-            knn_depths = knn_depths.detach().cpu()
-            march_steps = march_steps.detach().cpu()
-            cossims = cossims.detach().cpu()
-            cumulative_depth = cumulative_depth.detach().cpu()
-            epsilon = epsilon.detach().cpu()
-            output_depth = output_depth.detach().cpu()
-            del (
-                query,
-                knn_coords,
-                label,
-                knn_depths,
-                march_steps,
-                cossims,
-                cumulative_depth,
-                epsilon,
-                loss,
-                output_depth,
-            )
-            gc.collect()
-            torch.cuda.empty_cache()
-
         scheduler.step()
 
         errs = torch.cat(errs, 0)
@@ -158,7 +143,9 @@ def main(args):
         val_errs = []
         val_count = 0.0
         val_loss = 0.0
-        for val_query, val_knn_coords, val_label in val_data_loader:
+        for idx, (val_query, val_knn_coords, val_label) in enumerate(val_data_loader):
+            if idx >= 64 * 0.2:
+                break
             # Predict
             (
                 val_knn_depths,
@@ -208,8 +195,6 @@ def main(args):
                 val_depth,
                 loss,
             )
-            gc.collect()
-            torch.cuda.empty_cache()
 
         val_errs = torch.cat(val_errs, 0)
         outstr = f"Validation Loss: {val_loss / val_count} / MAE: {torch.mean(torch.absolute(val_errs))} / RMSE: {torch.sqrt(torch.mean(torch.square(val_errs)))}"

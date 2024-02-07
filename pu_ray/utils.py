@@ -2,7 +2,6 @@ import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import gc
 import os
 import random
 import math
