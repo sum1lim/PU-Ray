@@ -65,6 +65,11 @@ def main(args):
     inference_time = 0
     output_pc_li = []
     for input_df in input_li:
+        if len(input_df) > 10000:
+            print("Reducing input size")
+            print(f"Before {len(input_df)}")
+            input_df = farthest_point_sampling(input_df, int(len(input_df) * 0.9))
+
         updating_pc = torch.tensor(input_df[["x", "y", "z"]].values).double()
         num_points = 0
         output_size = len(input_df) * args.r
