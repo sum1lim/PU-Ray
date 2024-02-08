@@ -49,8 +49,8 @@ def main(args):
         train_dataset, [0.8, 0.2]
     )
 
-    if args.num_query // 64 > 5000:
-        batch_size = 5000
+    if args.num_query // 64 > 4096:
+        batch_size = 4096
     else:
         batch_size = args.num_query // 64
 
