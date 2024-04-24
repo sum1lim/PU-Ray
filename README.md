@@ -1,5 +1,5 @@
 # PU-Ray
- [arXiv](https://arxiv.org/abs/2310.08755) | [Code](https://github.com/sum1lim/PU-Ray) | [Data](https://drive.google.com/drive/folders/1OA4y9ZWiZSPiVnUP9EDiyZXlW7xrKSQk?usp=sharing)
+[IEEE](https://ieeexplore.ieee.org/document/10508258) | [arXiv](https://arxiv.org/abs/2310.08755) | [Code](https://github.com/sum1lim/PU-Ray) | [Data](https://drive.google.com/drive/folders/1OA4y9ZWiZSPiVnUP9EDiyZXlW7xrKSQk?usp=sharing)
 
 Official implementation of "PU-Ray: Point Cloud Upsampling via Ray Marching on Implicit Surface".
 
